@@ -1,7 +1,7 @@
 use master
 go
 
-Create Procedure Export_all_Logins
+Create Procedure sp_Export_all_Logins
 as
 begin
 declare 
