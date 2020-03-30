@@ -1,6 +1,6 @@
 use master
 go
-Alter Procedure sp_readerrorlogs(
+create Procedure sp_readerrorlogs(
 @text_search varchar(max) = '*',
 @date_from datetime = null,
 @date_to datetime = null
