@@ -1,19 +1,19 @@
 USE [master]
 GO
-/****** Object:  StoredProcedure [dbo].[sp_restore_database]    Script Date: 7/25/2020 11:20:02 PM ******/
+/****** Object:  StoredProcedure [dbo].[sp_restore_database]    Script Date: 7/1/2021 11:36:26 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE Procedure [dbo].[sp_restore_database]
 (
-@backupfile			varchar(max), 
-@filenumber			varchar(5) = 'all', 
-@restore_loc			varchar(500)  = 'default',
+@backupfile				varchar(max), 
+@filenumber				varchar(5) = 'all', 
+@restore_loc			varchar(500),
 @with_recovery			bit = 1,  
 @new_db_name			varchar(500) = 'default',
-@percent			int = 5,
-@password			varchar(100) = 'default')
+@percent				int = 5,
+@password				varchar(100) = 'default')
 as
 begin 
 declare @restor_loc_table table (output_text varchar(max))
@@ -31,7 +31,6 @@ declare
 @Position				int, 
 @DatabaseName			varchar(500), 
 @BackupType				int,
-@BackupTypeDescription  varchar(100),
 @lastfile				int
 
 declare @headeronly table (
@@ -131,6 +130,7 @@ when @@version like '%SQL Server 2012%' then 11
 when @@version like '%SQL Server 2014%' then 12 
 when @@version like '%SQL Server 2016%' then 13 
 when @@version like '%SQL Server 2017%' then 14 
+when @@version like '%SQL Server 2019%' then 15 
 end
 
 if @version = 10
@@ -185,9 +185,10 @@ or output_text like '%.ldf%'))a)b
 inner join (select reverse(substring(reverse(PhysicalName),1,charindex('\',reverse(physicalname))-1)) filelist from @filelistonly) fl
 on b.restore_loc_files = fl.filelist
 
+
 declare backupfiles_cursor cursor fast_forward for
-select Position, DatabaseName, BackupType, BackupTypeDescription
-from @headeronly 
+select Position, DatabaseName, BackupType
+from @headeronly
 where Position between 
 case when @filenumber = 'all' then 0 else @filenumber end
 and
@@ -196,8 +197,10 @@ case when @filenumber = 'all' then @lastfile else @filenumber end
 declare dbfiles_cursor cursor fast_forward for
 select 
 LogicalName, originalPath, 
-substring(PhysicalName, 1, charindex('.',PhysicalName)-1) PhysicalName,
-substring(PhysicalName, charindex('.',PhysicalName),len(PhysicalName)) ext
+case when PhysicalName like '%.%' then 
+		substring(PhysicalName, 1, charindex('.',PhysicalName)-1) else PhysicalName end PhysicalName,
+case when PhysicalName like '%.%' then 
+		reverse(substring(reverse(PhysicalName), 1, charindex('.',reverse(PhysicalName)))) else 'no_ext' end ext
 from (
 select LogicalName,
 reverse(substring(reverse(PhysicalName), charindex('\',reverse(PhysicalName)),len(PhysicalName))) OriginalPath, 
@@ -211,23 +214,20 @@ fetch next from dbfiles_cursor into @logicalname, @originalpath, @physicalname, 
 while @@fetch_status = 0
 begin
 
-if @restore_loc = 'default'
+if @restore_loc = @originalpath
 begin
 set @file_move = isnull(@file_move+',','')+'
-MOVE N'+''''+@logicalname+''''+' TO N'+''''+@originalpath+@physicalname+'__'+@unique_id+@ext+''''
+MOVE N'+''''+@logicalname+''''+' TO N'+''''+@originalpath+@physicalname+'__'+@unique_id+case @ext when 'no_ext' then '' else @ext end+''''
+end
+else if @files_exist > 0
+begin
+set @file_move = isnull(@file_move+',','')+'
+MOVE N'+''''+@logicalname+''''+' TO N'+''''+@restore_loc+@physicalname+'__'+@unique_id+case @ext when 'no_ext' then '' else @ext end+''''
 end
 else
 begin
-	if @files_exist > 0
-	begin
-		set @file_move = isnull(@file_move+',','')+'
-		MOVE N'+''''+@logicalname+''''+' TO N'+''''+@restore_loc+@physicalname+'__'+@unique_id+@ext+''''
-	end
-	else
-	begin
-		set @file_move = isnull(@file_move+',','')+'
-		MOVE N'+''''+@logicalname+''''+' TO N'+''''+@restore_loc+@physicalname+@ext+''''
-	end
+set @file_move = isnull(@file_move+',','')+'
+MOVE N'+''''+@logicalname+''''+' TO N'+''''+@restore_loc+@physicalname+case @ext when 'no_ext' then '' else @ext end+''''
 end
 
 fetch next from dbfiles_cursor into @logicalname, @originalpath, @physicalname, @ext
@@ -236,7 +236,7 @@ close dbfiles_cursor
 deallocate dbfiles_cursor 
 
 open backupfiles_cursor 
-fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType, @BackupTypeDescription
+fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType
 while @@fetch_status = 0
 begin
 
@@ -244,16 +244,12 @@ if @password = 'default'
 begin
 set @sql = '
 RESTORE '+
-case @BackupType 
-when 1 then @BackupTypeDescription 
-when 2 then substring(@BackupTypeDescription, charindex(' ',@BackupTypeDescription)+1, len(@BackupTypeDescription))
-when 5 then substring(@BackupTypeDescription, 1, charindex(' ',@BackupTypeDescription)-1)
-end+' '+
+case @BackupType when 1 then 'DATABASE' when 2 then 'LOG' end+' '+
 case when @new_db_name = 'default' then '['+@DatabaseName+']' else '['+@new_db_name+']' end
 +'
 FROM DISK = N'+''''+@backupfile+''''+'
 WITH FILE = '+cast(@Position as varchar)+','+
-case when @BackupType = 1 then @file_move+',' else '' end+'
+case when @BackupType ! = 2 then @file_move+',' else '' end+'
 '+case 
 when @filenumber  = 'all' and @lastfile = @position then 
 case when @with_recovery = 1 then 'RECOVERY' else 'NORECOVERY' end
@@ -265,16 +261,12 @@ else
 begin
 set @sql = '
 RESTORE '+
-case @BackupType 
-when 1 then @BackupTypeDescription 
-when 2 then substring(@BackupTypeDescription, charindex(' ',@BackupTypeDescription)+1, len(@BackupTypeDescription))
-when 5 then substring(@BackupTypeDescription, 1, charindex(' ',@BackupTypeDescription)-1)
-end+' '+
+case @BackupType when 1 then 'DATABASE' when 2 then 'LOG' end+' '+
 case when @new_db_name = 'default' then '['+@DatabaseName+']' else '['+@new_db_name+']' end
 +'
 FROM DISK = N'+''''+@backupfile+''''+'
 WITH FILE = '+cast(@Position as varchar)+','+
-case when @BackupType = 1 then @file_move+',' else '' end+'
+case when @BackupType ! = 2 then @file_move+',' else '' end+'
 '+case 
 when @filenumber  = 'all' and @lastfile = @position then 
 case when @with_recovery = 1 then 'RECOVERY' else 'NORECOVERY' end
@@ -283,11 +275,10 @@ case when @with_recovery = 1 then 'RECOVERY' else 'NORECOVERY' end
 else 'NORECOVERY' end+', NOUNLOAD, MEDIAPASSWORD= '+''''+@password+''''+', STATS = '+cast(@percent as varchar)
 end
 
-set @sql = replace(@sql, 'MSSQL14.DBAMI1','MSSQL14.DBAMI3')
-print(@sql)
+--print(@sql)
 exec(@sql)
 
-fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType, @BackupTypeDescription
+fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType
 end
 close backupfiles_cursor 
 deallocate backupfiles_cursor 
