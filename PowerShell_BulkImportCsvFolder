@@ -1,6 +1,6 @@
-$server = "."
-$database = "Rac_Azure_PowerShell"
-$path = "C:\AzureCostControl"
+$server = $args[0]
+$database = $args[1]
+$path = $args[2]
 $table1 = @()
 $table2 = @()
 $count = 0
