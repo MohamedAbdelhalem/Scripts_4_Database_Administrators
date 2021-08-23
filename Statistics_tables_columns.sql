@@ -17,4 +17,5 @@ inner join sys.tables t
 on t.object_id = s.object_id)a
 pivot
 (max(name) for stats_column_id in ([1], [2], [3], [4], [5], [6], [7], [8], [9]))piv)b
+--where table_name in ('','')
 order by table_name, stats_name
