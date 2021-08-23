@@ -1,4 +1,4 @@
-select table_name, stats_name, columns, last_updated, master.dbo.Format(rows,-1) rows, modification_counter, 
+select table_name, stats_name, columns, last_updated, master.dbo.Format(rows,-1) rows, master.dbo.Format(modification_counter,-1) modification_counter, 
 isnull(round((cast(modification_counter as float)/cast(rows as float)) * 100,2),10000) pct, 
 case when (cast(modification_counter as float)/cast(rows as float)) * 100 < 20   then 1 else 0 end frequently_use,
 case when (cast(modification_counter as float)/cast(rows as float)) * 100 > 20   then 1 else 0 end not_often_frequently_use,
