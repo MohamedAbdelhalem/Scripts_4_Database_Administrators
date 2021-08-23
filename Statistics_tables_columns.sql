@@ -1,4 +1,9 @@
-select table_name, stats_name, columns, last_updated, rows, modification_counter
+select table_name, stats_name, columns, last_updated, rows, modification_counter, 
+case when (cast(modification_counter as float)/cast(rows as float)) * 100 < 20   then 1 else 0 end frequently_use,
+case when (cast(modification_counter as float)/cast(rows as float)) * 100 > 20   then 1 else 0 end not_often_frequently_use,
+case when (cast(modification_counter as float)/cast(rows as float)) * 100 > 300  then 1 else 0 end single_frequently_use,
+case when (cast(modification_counter as float)/cast(rows as float)) * 100 > 1000 then 1 else 0 end not_in_use,
+round((cast(modification_counter as float)/cast(rows as float)) * 100,2) pct 
 from (
 select object_id, stats_id, table_name, stats_name, --[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17]
 isnull(  '['+[1]+']','')+
@@ -20,8 +25,9 @@ on t.object_id = s.object_id)a
 pivot
 (max(name) for stats_column_id in ([1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17]))piv)b
 cross apply [sys].[dm_db_stats_properties_internal](object_id,stats_id)
-where table_name in ('[dbo].[TRANS_PARTIES]','')
-and stats_name = 'IX_TRANS_PARTIES_1'
+where table_name in ('[dbo].[LOG]','')
+--and stats_name = 'IX_TRANS_PARTIES_1'
+order by frequently_use desc, not_often_frequently_use, single_frequently_use, not_in_use, pct desc
 
 -- To find the exact row set in the stats
 select '['+schema_name(t.schema_id)+'].['+t.name+']' table_name, s.name stats_name, c.* 
