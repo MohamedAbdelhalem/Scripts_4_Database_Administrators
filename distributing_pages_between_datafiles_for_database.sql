@@ -58,42 +58,42 @@ group by table_name, index_name, schema_table_name, type_desc, ver)b
 order by rows desc
 
 
---declare @table table (id int, drive varchar(10))
---insert into @table values (1,'w'),(2,'v'),(3,'u'),(4,'t')
+#######################################################################################################
+declare @table table (id int, drive varchar(10))
+insert into @table values (1,'w'),(2,'v'),(3,'u'),(4,'t')
 
---select replace(replace(sql_add_file,'#',cast(t.id as varchar(50))),'@', drive)
---from (
---select row_number() over (order by sql_add_file) id, sql_add_file
---from (
---select 'alter database ['+
---db_name(database_id)+'] add file (name='+''''+name+'_#'+''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
---cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)' sql_add_file
---from sys.master_files
---where database_id in (18)
---and file_id = 1
---union
---select 'alter database ['+
---db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
---cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
---from sys.master_files
---where database_id in (18)
---and file_id = 1
---union
---select 'alter database ['+
---db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
---cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
---from sys.master_files
---where database_id in (18)
---and file_id = 1
---union
---select 'alter database ['+
---db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
---cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
---from sys.master_files
---where database_id in (18)
---and file_id = 1)a)b cross apply @table t
-
-
+select replace(replace(sql_add_file,'#',cast(t.id as varchar(50))),'@', drive)
+from (
+select row_number() over (order by sql_add_file) id, sql_add_file
+from (
+select 'alter database ['+
+db_name(database_id)+'] add file (name='+''''+name+'_#'+''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
+cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)' sql_add_file
+from sys.master_files
+where database_id in (18)
+and file_id = 1
+union
+select 'alter database ['+
+db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
+cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
+from sys.master_files
+where database_id in (18)
+and file_id = 1
+union
+select 'alter database ['+
+db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
+cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
+from sys.master_files
+where database_id in (18)
+and file_id = 1
+union
+select 'alter database ['+
+db_name(database_id)+'] add file (name='+''''+name+'_#'++''''+', filename='+''''+'@'+substring(physical_name,2,len(physical_name)-5)+'_#.ndf'+''''+', size='+
+cast(size*8 as varchar(20))+'kb, filegrowth='+cast(growth*8 as varchar(20))+'kb, maxsize = unlimited)'
+from sys.master_files
+where database_id in (18)
+and file_id = 1)a)b cross apply @table t
+#######################################################################################################
 
 use [database name]
 go
