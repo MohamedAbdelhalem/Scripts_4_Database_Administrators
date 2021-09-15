@@ -1,5 +1,6 @@
 --Create 3 jobs in all instances (primary and secondary) the same
 --and put those 3 procedures (Full, Differential, and Transaction log) for each job and name the jobs as it mentained.
+--and for each job 3 steps for each step the procedure step number as it below.
 --Full backup job is *Full_Backup_Database*
 --Differential backup job is *Differential_Backup*
 --Transaction Log backup job is *Transaction_Log_Backup*
