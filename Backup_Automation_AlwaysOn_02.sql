@@ -43,7 +43,7 @@ end
 
 GO
 
-ALTER PROCEDURE [dbo].[Full_Backup_Databases_step2]
+CREATE PROCEDURE [dbo].[Full_Backup_Databases_step2]
 as
 begin
 
