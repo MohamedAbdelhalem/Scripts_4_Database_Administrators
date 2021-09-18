@@ -5,6 +5,14 @@
 --Full backup job is *Full_Backup_Database*
 --Differential backup job is *Differential_Backup*
 --Transaction Log backup job is *Transaction_Log_Backup*
+--about the backup on secondary node this can be happened with the below checks
+--1: Full backup Copy_only
+--2: Transaction log normal copy_only not supported in Secondary
+--3: Differential backups are not supported in the Secondary, but:
+--if you are using
+--SQL Server 2017 it's allowed to use Differential backups on the secondary for using versions between RTM and CU19, and after that it's not supported.
+--SQL Server 2019 it's allowed to use Differential backups on the secondary for using versions between RTM and CU5, and after that it's not supported.
+--use Differential backup in the primary node.
 
 CREATE PROCEDURE [dbo].[Full_Backup_Databases_step1]
 as
@@ -15,7 +23,7 @@ select @isPrimary = is_primary
 from Backup_Preferences
 
 select @is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
-@server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
+@server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
 
@@ -23,26 +31,25 @@ IF @is_primary = @isPrimary and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[reset_sequence] @type = 0
+		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
+		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
+		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[reset_sequence] @type = 0
 	end
 	if @server_number = 1
 	begin
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[reset_sequence] @type = 0
+		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
+		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
+		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[reset_sequence] @type = 0
 	end
 waitfor delay '00:00:10'
 end
-else
+else iF @is_primary = @isPrimary and @is_primary = 1
 begin
 		exec [Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
 		exec [Bak_Config].[dbo].[Insert_into_config] @type = 'F'
 		exec [Bak_Config].[dbo].[reset_sequence] @type = 0
 end
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Full_Backup_Databases_step2]
@@ -59,24 +66,22 @@ where server_id = 0
 
 IF @is_primary = @isPrimary
 begin
-	exec [dbo].[backup_database_v03] @backup_type = 'F', @server_type = @isPrimary
-	
 	if @server_number = 1 and @is_primary = 0
 	begin
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
 	end
 	else if @server_number = 2 and @is_primary = 0
 	begin
-		exec  [LinkedServerforServer01].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+		exec  [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
 	end
 	else if @is_primary = 1
 	begin
+	--in this case we take backups from the Primary for the non-AlwaysOn datatabases.
 		exec  [Bak_Config].[dbo].[backup_database] @backup_type = 'F'
 	end
 end
 
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Full_Backup_Databases_step3]
@@ -89,7 +94,7 @@ select @is_primary = case when name = (select Primary_replica from sys.dm_hadr_a
 from sys.servers
 where server_id = 0
 
-select @server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
+select @server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
 
@@ -97,25 +102,25 @@ IF @is_primary = @isPrimary and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-	update [LinkedServerforServer01].[Bak_Config].[dbo].[config] set 
+	update [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] set 
 	backup_end = getdate(), 
 	status = 1
 	where status = 0
 	and backup_type = 'F'
 
-	exec [LinkedServerforServer01].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
-	exec [LinkedServerforServer01].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
+	exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
 	end
 	else if @server_number = 1
 	begin
-	update [LinkedServerforServer02].[Bak_Config].[dbo].[config] set 
+	update [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] set 
 	backup_end = getdate(), 
 	status = 1
 	where status = 0
 	and backup_type = 'F'
 
-	exec [LinkedServerforServer02].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
-	exec [LinkedServerforServer02].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
+	exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
 	end
 end
 else
@@ -131,156 +136,41 @@ else
 end
 	exec msdb.dbo.sp_start_job @job_name = 'Transaction_Log_Backup'
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Differential_Backup_databases_step1]
 as
 begin
-declare @is_primary int, @is_critical int, @server_number int, @isPrimary bit
+declare @is_primary int
 
-select @isPrimary = is_primary 
-from Backup_Preferences
-
-select 
-@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
-@server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
-from sys.servers
-where server_id = 0
-
-select @is_critical =
-case 
-when datepart(WEEKDAY, getdate())  = 7 and getdate() < dateadd(hour, 19, convert(datetime,convert(date, getdate(),120),120)) 
-then 0
-when datepart(WEEKDAY, getdate())  < 7 
-then 0 
-else 1 end
-
-IF @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 0
-begin
-	if @server_number = 2
-	begin
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 0
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[Insert_into_Config] @type = 'D'
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[reset_sequence] @type = 2
-	end
-	else if @server_number = 1
-	begin
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 0
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[Insert_into_Config] @type = 'D'
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[reset_sequence] @type = 2
-	end
-waitfor delay '00:00:10'
-end
-else
+IF @is_primary = 1
 begin
 		exec [Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 0
 		exec [Bak_Config].[dbo].[Insert_into_Config] @type = 'D'
 		exec [Bak_Config].[dbo].[reset_sequence] @type = 2
 end
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Differential_Backup_databases_step2]
 as
 begin
-declare @is_primary int, @is_critical int, @isPrimary bit
+declare @is_primary int
 
-select @isPrimary = is_primary 
-from Backup_Preferences
-
-select 
-@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end
-from sys.servers
-where server_id = 0
-
-select @is_critical =
-case 
-when datepart(WEEKDAY, getdate())  = 7 and getdate() < dateadd(hour, 19, convert(datetime,convert(date, getdate(),120),120)) 
-then 0
-when datepart(WEEKDAY, getdate())  < 7 
-then 0 
-else 1 end
-
-IF @is_primary = @isPrimary and @is_critical = 0
+IF @is_primary = 1
 begin
-exec [dbo].[backup_database_v03] @backup_type = 'D', @server_type = @isPrimary
+	exec [Bak_Config].[dbo].[backup_database_v03] @backup_type = 'D', @server_type = 1
 end
-
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Differential_Backup_databases_step3]
 as
 begin
-declare @is_primary int, @is_critical int, @server_number int, @isPrimary bit
+declare @is_primary int
 declare @start_date datetime, @end_date datetime
 
-select @isPrimary = is_primary 
-from Backup_Preferences
-
-select 
-@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
-@server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
-from sys.servers
-where server_id = 0
-
-select @is_critical =
-case 
-when datepart(WEEKDAY, getdate())  = 7 and getdate() < dateadd(hour, 19, convert(datetime,convert(date, getdate(),120),120)) 
-then 0
-when datepart(WEEKDAY, getdate())  < 7 
-then 0 
-else 1 end
-
-IF @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 0
-begin
-	if @server_number = 2
-	begin
-		update [LinkedServerforServer01].[Bak_Config].[dbo].config set 
-		backup_end = getdate(), 
-		status = 1
-		where status = 0
-		and backup_type = 'D'
-	
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'D'
-
-		select 
-		@start_date = dateadd(minute, 15, backup_end),
-		@end_date = dateadd(minute, 15 * 40, backup_end)
-		from [LinkedServerforServer01].[Bak_Config].[dbo].[config]
-		where backup_type = 'D'
-		and status = 1
-		and backup_start in (select max(backup_start) from (select backup_start, backup_type from config where backup_type = 'D')a)
-
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[sp_change_job_schedule_v02] @job_name = 'Transaction_Log_Backup', @start = @start_date, @end = @end_date	
-		exec [LinkedServerforServer01].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 1
-	end
-	else if @server_number = 1
-	begin
-		update [LinkedServerforServer02].[Bak_Config].[dbo].config set 
-		backup_end = getdate(), 
-		status = 1
-		where status = 0
-		and backup_type = 'D'
-	
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'D'
-
-		select 
-		@start_date = dateadd(minute, 15, backup_end),
-		@end_date = dateadd(minute, 15 * 40, backup_end)
-		from [LinkedServerforServer02].[Bak_Config].[dbo].[config]
-		where backup_type = 'D'
-		and status = 1
-		and backup_start in (select max(backup_start) from (select backup_start, backup_type from config where backup_type = 'D')a)
-
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[sp_change_job_schedule_v02] @job_name = 'Transaction_Log_Backup', @start = @start_date, @end = @end_date	
-		exec [LinkedServerforServer02].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 1
-	end
-end
-else
+IF @is_primary = 1
 begin
 	update [Bak_Config].[dbo].config set 
 	backup_end = getdate(), 
@@ -302,7 +192,6 @@ begin
 	exec [Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 1
 end
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Transaction_Log_Backup_step1]
@@ -314,7 +203,7 @@ from Backup_Preferences
 
 select 
 @is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
-@server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
+@server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
 
@@ -330,21 +219,21 @@ IF @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-		IF (select count(*) from [LinkedServerforServer01].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
+		IF (select count(*) from [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
 		Begin
-			exec [LinkedServerforServer01].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
+			exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
 		End
 	end
 	else if @server_number = 1
 	begin
-		IF (select count(*) from [LinkedServerforServer02].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
+		IF (select count(*) from [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
 		Begin
-			exec [LinkedServerforServer02].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
+			exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
 		End
 	end
 waitfor delay '00:00:10'
 end
-else
+else iF @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 1
 begin
 	IF (select count(*) from [Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
 	Begin
@@ -352,7 +241,6 @@ begin
 	End
 end
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Transaction_Log_Backup_step2]
@@ -385,7 +273,6 @@ begin
 	End
 end
 end
-
 GO
 
 CREATE PROCEDURE [dbo].[Transaction_Log_Backup_step3]
@@ -397,7 +284,7 @@ from Backup_Preferences
 
 select 
 @is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
-@server_number = case left(reverse(substring(name,1,charindex('\', name)-1)),1) when 2 then 1 when 4 then 2 end
+@server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
 
@@ -417,7 +304,7 @@ begin
 	Begin
 		if @server_number = 2
 		begin
-			update [LinkedServerforServer01].[Bak_Config].[dbo].[config] set 
+			update [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] set 
 			backup_end = getdate(), 
 			status = 1
 			where status = 0
@@ -425,7 +312,7 @@ begin
 		end
 		else if @server_number = 1
 		begin
-			update [LinkedServerforServer02].[Bak_Config].[dbo].[config] set 
+			update [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] set 
 			backup_end = getdate(), 
 			status = 1
 			where status = 0
@@ -433,7 +320,7 @@ begin
 		end
 	end
 End
-else
+else if @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 1
 begin
 	IF 
 	(select count(*) from config where backup_type = 'L' and status = 0) = 1 and
@@ -447,3 +334,8 @@ begin
 	end
 end
 end
+GO
+
+
+
+
