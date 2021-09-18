@@ -4,7 +4,14 @@ GO
 --the switch on and off for primary or secondary backup preferences
 CREATE TABLE [dbo].[Backup_Preferences](
 	[is_primary] [bit] NULL
-) ON [PRIMARY]
+)
+GO
+
+CREATE TABLE [dbo].[Excluded_Databases](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[Database_name] [varchar](150) NULL,
+	[backup_types] [varchar](10) NULL
+)
 GO
 
 --log and status table
@@ -146,6 +153,88 @@ deallocate backup_cursor
 end
 end
 
+GO
+
+CREATE Procedure [dbo].[Backup_Database](
+@database_name varchar(max),
+@backup_type varchar(1),
+@full_path varchar(2000) = '\\db-nfs-server\backup\')
+as
+begin
+
+declare 
+@db_name		varchar(300), 
+@sql			varchar(2000), 
+@file_name		varchar(1000), 
+@week_number	varchar(10), 
+@backup_start	varchar(30), 
+@date			varchar(10), 
+@time			varchar(10), 
+@ampm			varchar(2),
+@diff_seq		varchar(5),
+@log_seq 		varchar(5)
+
+declare backup_cursor cursor fast_forward
+for
+select Database_name
+from Excluded_Databases
+where backup_types = @backup_type
+order by Database_name
+
+select 
+@week_number  = case when len(week_number) = 1 then '0'+cast(week_number as varchar) else cast(week_number as varchar) end, 
+@backup_start = backup_start,
+@diff_seq = case when len(Diff_sequence_number) = 1 then '0'+cast(Diff_sequence_number as varchar) else cast(Diff_sequence_number as varchar) end,
+@log_seq =  case when len(Log_sequence_number) = 1 then '0'+cast(Log_sequence_number as varchar) else cast(Log_sequence_number as varchar) end
+from Bak_Config.dbo.config
+where backup_type = @backup_type
+and status = 0
+
+set @date = replace(convert(varchar(10),convert(datetime, @backup_start, 120), 120),'-','_')
+set @time = replace(convert(varchar(5),convert(datetime, @backup_start, 120), 108),':','_')
+set @ampm = case when cast(substring(@time, 1, 2) as int) < 12 then 'AM' else 'PM' end
+set @file_name = case @backup_type 
+when 'F' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number
+when 'D' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+@diff_seq
+when 'L' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+@diff_seq+'__TLog_'+@log_seq
+end
+
+open backup_cursor
+fetch next from backup_cursor into @db_name
+while @@fetch_status = 0
+begin
+
+set @sql = 'BACKUP '+case @backup_type 
+when 'F' then 'DATABASE' 
+when 'D' then 'DATABASE' 
+when 'L' then 'LOG' end + ' ['+@db_name+'] 
+TO  DISK = N'+''''+@full_path+@db_name+'_'+@file_name+'.bak'' 
+WITH '+case @backup_type 
+when 'F' then '' 
+when 'L' then '' 
+when 'D' then 'DIFFERENTIAL, ' end+ 'NOFORMAT, NOINIT,  
+NAME = N'+''''+@db_name+'-Full Database Backup'', SKIP, NOREWIND, NOUNLOAD, COMPRESSION, STATS = 10'
+
+select  case @backup_type 
+when 'F' then 'DATABASE' 
+when 'D' then 'DATABASE' 
+when 'L' then 'LOG' end , ' ['+@db_name+']', @full_path,@db_name,@file_name,
+case @backup_type 
+when 'F' then '' 
+when 'L' then '' 
+when 'D' then 'DIFFERENTIAL, ' end,@db_name
+
+
+exec (@sql)
+print(@sql)
+print(' ')
+
+fetch next from backup_cursor into @db_name
+end
+close backup_cursor
+deallocate backup_cursor
+
+end
 GO
 
 CREATE procedure [dbo].[Delete_Expired_Backup_v02]
