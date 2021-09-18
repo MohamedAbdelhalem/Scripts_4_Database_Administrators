@@ -138,10 +138,15 @@ end
 end
 GO
 
-CREATE PROCEDURE [dbo].[Differential_Backup_databases_step1]
+CREATE  PROCEDURE [dbo].[Differential_Backup_databases_step1]
 as
 begin
 declare @is_primary int
+
+select 
+@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end
+from sys.servers
+where server_id = 0
 
 IF @is_primary = 1
 begin
@@ -157,6 +162,11 @@ as
 begin
 declare @is_primary int
 
+select 
+@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end
+from sys.servers
+where server_id = 0
+
 IF @is_primary = 1
 begin
 	exec [Bak_Config].[dbo].[backup_database_v03] @backup_type = 'D', @server_type = 1
@@ -167,8 +177,12 @@ GO
 CREATE PROCEDURE [dbo].[Differential_Backup_databases_step3]
 as
 begin
-declare @is_primary int
-declare @start_date datetime, @end_date datetime
+declare @is_primary int, @start_date datetime, @end_date datetime
+
+select 
+@is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end
+from sys.servers
+where server_id = 0
 
 IF @is_primary = 1
 begin
