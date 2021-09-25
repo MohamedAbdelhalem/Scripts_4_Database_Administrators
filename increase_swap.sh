@@ -3,7 +3,7 @@ siz=$2          #parameter2 means the swap file size = 1GB
 swaparr=()
 nofiles=()
 siz=$((siz * 1024))
-query=$(ls / | grep $dir)
+query=$(ls / | grep "\<$dir\>")
 exist=${#query}
 if [[ $exist -gt 0 ]]; then
         swaparr=($(ls /$dir | grep swapfile))
@@ -11,11 +11,11 @@ if [[ $exist -gt 0 ]]; then
                 file=$(echo ${swaparr[$c]} | cut -d " " -f9-)
                 nofiles=(${file:8:3})
         done
+	curr=$(($(echo "${nofiles[*]}" | sort -nr | head -n1) + 1))
 else
-echo "do not exist"
+	mkdir /$dir
+	curr=1
 fi
-
-curr=$(($(echo "${nofiles[*]}" | sort -nr | head -n1) + 1))
 
 dd if=/dev/zero of=/$dir/swapfile$curr bs=1M count=$siz
 mkswap /$dir/swapfile$curr
