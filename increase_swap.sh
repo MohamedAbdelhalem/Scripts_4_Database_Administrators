@@ -31,6 +31,7 @@ fi
 dd if=/dev/zero of=/$dir/swapfile$curr bs=1M count=$siz
 mkswap /$dir/swapfile$curr
 chmod 600 /$dir/swapfile$curr
+chown -R root:root /$dir/swapfile$curr
 echo "/$dir/swapfile$curr         swap                    swap    defaults        0 0" >> /etc/fstab
 swapon -a
 swapon -s
