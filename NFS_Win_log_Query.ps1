@@ -1,0 +1,3 @@
+Get-WinEvent -ProviderName Microsoft-Windows-ServicesForNFS-Server | Select-Object Id,TimeCreated,@{label='Server_IP'; expression={$_.Message.Substring(38,11)}} | Where-Object {$_.Server_IP -like '*10.13.32.10*'} |format-table -wrap
+
+Get-WinEvent -ProviderName Microsoft-Windows-ServicesForNFS-Server | Select-Object Id,@{label='Server_IP'; expression={$_.Message.Substring(38,11)}}, @{label='Date'; expression={Get-Date ($_.timecreated) -Format 'yyyy-MM-dd hh:mm'}} | Where-Object {$_.Server_IP -like '*10.13.32.10*' -or $_.server_ip -like "*10.13.32.11*"} | Group-Object -Property id,server_ip,date | format-table -wrap
