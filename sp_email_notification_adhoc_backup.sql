@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  StoredProcedure [dbo].[sp_email_notification_adhoc_backup]    Script Date: 11/1/2021 3:02:52 PM ******/
+/****** Object:  StoredProcedure [dbo].[sp_email_notification_adhoc_backup]    Script Date: 11/2/2021 3:19:18 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -18,10 +18,15 @@ begin
 --@emails varchar(2000) = 'Osama M. Salem ( Contractor ) <osalem@riyadhairports.com>            ,            Mashail S. Al-Juraid <mjuraid@riyadhairports.com>            '
 --@ccemails varchar(2000) = 'Malek B. Al-Iswed <miswed@riyadhairports.com>,Halah M. Al-Abdullah <halabdullah@riyadhairports.com>,Mohamed Abdelhalem <mabdelhalem@riyadhairports.com>,Shahid Khan <shahidk@riyadhairports.com>'
 
-declare @tab varchar(max), @dbno int, @first_name varchar(500), @message varchar(500), @cluster_name varchar(100), @cluster_ip varchar(50), @instance_name varchar(100), @port varchar(10), @loop int = 0, @db_name varchar(300)
+declare @tab varchar(max), @dbno int, @receivers int, @is_cluster int, @first_name varchar(500), @message varchar(500), @cluster_name varchar(100), @cluster_ip varchar(50), @instance_name varchar(100), @port varchar(10), @loop int = 0, @db_name varchar(300)
 declare @backup_file varchar(1000), @start_date varchar(30), @finish_date varchar(30), @duration varchar(20), @backup_size varchar(30), @backup_type varchar(20)
-select @dbno = count(*) 
-from dbo.Separator(@database,',')
+
+select @dbno = count(*) from dbo.Separator(@database,',')
+select @receivers = count(*) from dbo.Separator(@emails,',')
+if exists (select * from sys.dm_os_cluster_properties)
+set @is_cluster = 1
+else 
+set @is_cluster = 0
 
 select @first_name = substring(first_name, 1, len(first_name)-1)
 from (
@@ -65,19 +70,23 @@ from dbo.Separator(@ccemails,','))a
 pivot
 (max(ccemail) for id in ([1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16]))pvt)b
 
-set @first_name = 'Dear '+@first_name+','
+set @first_name = 'Dear '+case 
+when @receivers > 1 then  reverse(substring(reverse(@first_name),charindex(',',reverse(@first_name)), len(reverse(@first_name))))+
+' and'+reverse(substring(reverse(@first_name),1,charindex(',',reverse(@first_name))-1)) 
+when @receivers = 1 then @first_name end +','
 set @message = 'Kindly be informed that the below database'+case when @dbno > 1 then 's have ' else ' has ' end +'backed up as you requested.'
+
+declare @table table (output_text varchar(max))
+declare @std nvarchar(max) = 'xp_cmdshell ''powershell.exe -Command " & {Get-NetIPAddress -AddressFamily IPV4 | Select-Object IPAddress}"'''
+if not exists (select * from sys.dm_os_cluster_properties)
+insert into @table
+exec (@std)
 
 --select @dbno, @first_name, @emails, @ccemails, @message
 
-declare @table table (output_text varchar(max))
-declare @letter varchar(5) = (select distinct top 1 left(physical_name,1) from sys.master_files)
-declare @sql nvarchar(max) = 'xp_cmdshell ''powershell.exe -Command " & {Get-ClusterNetworkInterface | format-table -Property Node,Address}"'''
-insert into @table
-exec (@sql)
-
 select 
-@cluster_name = case when charindex('\',s.name) = 0 then s.name else substring(s.name, 1, charindex('\',s.name)-1) end, @cluster_ip = t.IP_Address,
+@cluster_name  = case when charindex('\',s.name) = 0 then s.name else substring(s.name, 1, charindex('\',s.name)-1) end, 
+@cluster_ip    = case when @is_cluster = 1 then t.IP_Address else (select output_text from @table where output_text like '10.%') end,
 @instance_name = case when charindex('\',s.name) = 0 then 'MSSQLSERVER' else substring(s.name, charindex('\',s.name)+1, len(s.name))end, @port = t.Port
 from sys.servers s
 cross apply (select ip_address, port from sys.dm_tcp_listener_states where listener_id = 1) t
@@ -160,8 +169,8 @@ declare @body varchar(max) =
 '+'</pre>
 <table style="border:1px solid BLUE;border-collapse:collapse;width: 70%">
   <tr bgcolor="YELLOW">
-  <th style="border:1px solid black;">SQL Cluster Name</th>
-  <th style="border:1px solid black;">SQL Cluster IP</th>
+  <th style="border:1px solid black;">'+case when @is_cluster = 1 then 'SQL Cluster Name' else 'Server Name' end+'</th>
+  <th style="border:1px solid black;">'+case when @is_cluster = 1 then 'SQL Cluster IP' else 'IP Address' end+'</th>
   <th style="border:1px solid black;">Instance Name</th>
   <th style="border:1px solid black;">Port</th>
   <th style="border:1px solid black;">NO#</th>
