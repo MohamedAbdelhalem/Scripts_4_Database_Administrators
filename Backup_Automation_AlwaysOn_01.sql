@@ -56,34 +56,34 @@ GO
 CREATE Procedure [dbo].[Backup_Database_v03](
 @backup_type varchar(1),
 @server_type int,
-@full_path varchar(2000) = '\\10.13.32.51\SharedBackup\')
+@full_path varchar(2000) = '\\db-nfs-server\backup\')
 as
 begin
-
+ 
 declare 
-@db_name		varchar(300), 
-@sql			varchar(2000), 
-@file_name		varchar(1000), 
-@week_number	varchar(10), 
-@backup_start	varchar(30), 
-@date			varchar(10), 
-@time			varchar(10), 
-@ampm			varchar(2),
-@diff_seq		varchar(5),
-@log_seq 		varchar(5),
-@isPrimary		int
-
+@db_name             varchar(300), 
+@sql                 varchar(2000), 
+@file_name           varchar(1000), 
+@week_number         varchar(10), 
+@backup_start        varchar(30), 
+@date                varchar(10), 
+@time                varchar(10), 
+@ampm                varchar(2),
+@diff_seq            varchar(5),
+@log_seq             varchar(5),
+@isPrimary           int
+ 
 select 
 @isPrimary = isnull(primary_recovery_health,0)
 from sys.dm_hadr_availability_replica_cluster_nodes n left outer join sys.dm_hadr_availability_group_states g
 on g.primary_replica = n.replica_server_name
 where n.replica_server_name in (select name from sys.servers where server_id = 0)
-
+ 
 print('is it a primary? = '+cast(@isPrimary as varchar(10)))
-
+ 
 if @isPrimary = @server_type
 begin
-
+ 
 declare backup_cursor cursor fast_forward
 for
 select database_name
@@ -99,9 +99,11 @@ and is_database_joined = 1
 and dbr.synchronization_health = 2
 and dbr.is_primary_replica = @server_type
 and db_id(database_name) > 4
-and database_name not in ('AdventureWorks2017','Bak_Config')
+and database_name not in ('AdventureWorks2016','Bak_Config')
+--and database_name in (
+--'DBA')
 order by database_name
-
+ 
 select 
 @week_number  = case when len(week_number) = 1 then '0'+cast(week_number as varchar) else cast(week_number as varchar) end, 
 @backup_start = backup_start,
@@ -110,7 +112,7 @@ select
 from Bak_Config.dbo.config
 where backup_type = @backup_type
 and status = 0
-
+ 
 set @date = replace(convert(varchar(10),convert(datetime, @backup_start, 120), 120),'-','_')
 set @time = replace(convert(varchar(5),convert(datetime, @backup_start, 120), 108),':','_')
 set @ampm = case when cast(substring(@time, 1, 2) as int) < 12 then 'AM' else 'PM' end
@@ -119,12 +121,12 @@ when 'F' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number
 when 'D' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+isnull(@diff_seq,'0')
 when 'L' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+isnull(@diff_seq,'0')+'__TLog_'+@log_seq
 end
-
+ 
 open backup_cursor
 fetch next from backup_cursor into @db_name
 while @@fetch_status = 0
 begin
-
+ 
 set @sql = 'BACKUP '+case @backup_type 
 when 'F' then 'DATABASE' 
 when 'D' then 'DATABASE' 
@@ -140,47 +142,47 @@ when 'D' then 'Diff'
 when 'L' then 'LOG' end+ ' Database Backup'', SKIP, NOREWIND, NOUNLOAD, COMPRESSION, '+
 case when @server_type = 0 and @backup_type in ('F','D') then 'COPY_ONLY, ' else '' end+ 
 'STATS = 10'
-
+ 
 exec (@sql)
 print(@sql)
 print(' ')
-
+ 
 fetch next from backup_cursor into @db_name
 end
 close backup_cursor
 deallocate backup_cursor
-
+ 
 end
 end
-
+ 
 GO
 
 CREATE Procedure [dbo].[Backup_Database](
-@database_name varchar(max),
+--@database_name varchar(max),
 @backup_type varchar(1),
 @full_path varchar(2000) = '\\db-nfs-server\backup\')
 as
 begin
-
+ 
 declare 
-@db_name		varchar(300), 
-@sql			varchar(2000), 
-@file_name		varchar(1000), 
-@week_number	varchar(10), 
-@backup_start	varchar(30), 
-@date			varchar(10), 
-@time			varchar(10), 
-@ampm			varchar(2),
-@diff_seq		varchar(5),
-@log_seq 		varchar(5)
-
+@db_name                                varchar(300), 
+@sql                                         varchar(2000), 
+@file_name                               varchar(1000), 
+@week_number         varchar(10), 
+@backup_start           varchar(30), 
+@date                                       varchar(10), 
+@time                                       varchar(10), 
+@ampm                                    varchar(2),
+@diff_seq                  varchar(5),
+@log_seq                  varchar(5)
+ 
 declare backup_cursor cursor fast_forward
 for
 select Database_name
 from Excluded_Databases
 where backup_types = @backup_type
 order by Database_name
-
+ 
 select 
 @week_number  = case when len(week_number) = 1 then '0'+cast(week_number as varchar) else cast(week_number as varchar) end, 
 @backup_start = backup_start,
@@ -189,7 +191,7 @@ select
 from Bak_Config.dbo.config
 where backup_type = @backup_type
 and status = 0
-
+ 
 set @date = replace(convert(varchar(10),convert(datetime, @backup_start, 120), 120),'-','_')
 set @time = replace(convert(varchar(5),convert(datetime, @backup_start, 120), 108),':','_')
 set @ampm = case when cast(substring(@time, 1, 2) as int) < 12 then 'AM' else 'PM' end
@@ -198,12 +200,12 @@ when 'F' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number
 when 'D' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+@diff_seq
 when 'L' then @date+'__'+@time+'_'+@ampm+'__Full_'+@week_number+'__Diff_'+@diff_seq+'__TLog_'+@log_seq
 end
-
+ 
 open backup_cursor
 fetch next from backup_cursor into @db_name
 while @@fetch_status = 0
 begin
-
+ 
 set @sql = 'BACKUP '+case @backup_type 
 when 'F' then 'DATABASE' 
 when 'D' then 'DATABASE' 
@@ -214,7 +216,7 @@ when 'F' then ''
 when 'L' then '' 
 when 'D' then 'DIFFERENTIAL, ' end+ 'NOFORMAT, NOINIT,  
 NAME = N'+''''+@db_name+'-Full Database Backup'', SKIP, NOREWIND, NOUNLOAD, COMPRESSION, STATS = 10'
-
+ 
 select  case @backup_type 
 when 'F' then 'DATABASE' 
 when 'D' then 'DATABASE' 
@@ -223,17 +225,17 @@ case @backup_type
 when 'F' then '' 
 when 'L' then '' 
 when 'D' then 'DIFFERENTIAL, ' end,@db_name
-
-
+ 
+ 
 exec (@sql)
 print(@sql)
 print(' ')
-
+ 
 fetch next from backup_cursor into @db_name
 end
 close backup_cursor
 deallocate backup_cursor
-
+ 
 end
 GO
 
