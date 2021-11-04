@@ -58,29 +58,29 @@ begin
 declare @is_primary int, @server_number int, @isPrimary bit
 select @isPrimary = is_primary 
 from Backup_Preferences
-
+ 
 select @is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
 @server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
-
-IF @is_primary = @isPrimary
+ 
+IF @is_primary = @isPrimary and @is_primary = 0
 begin
-	if @server_number = 1 and @is_primary = 0
-	begin
-		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
-	end
-	else if @server_number = 2 and @is_primary = 0
-	begin
-		exec  [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
-	end
-	else if @is_primary = 1
-	begin
-	--in this case we take backups from the Primary for the non-AlwaysOn datatabases.
-		exec  [Bak_Config].[dbo].[backup_database] @backup_type = 'F'
-	end
+                exec [Bak_Config].[dbo].[Backup_Database_v03] @backup_type = 'F', @server_type = @is_primary
+                if @server_number = 1
+                begin
+                                exec  [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                end
+                else if @server_number = 2
+                begin
+                                exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                end
+else if @is_primary = @isPrimary and @is_primary = 1
+begin
+                exec [Bak_Config].[dbo].[Backup_Database_v03] @backup_type = 'F', @server_type = @is_primary
+                exec  [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
 end
-
+end
 end
 GO
 
