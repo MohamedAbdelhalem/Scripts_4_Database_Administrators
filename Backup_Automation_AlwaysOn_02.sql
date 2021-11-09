@@ -14,6 +14,8 @@
 --SQL Server 2019 it's allowed to use Differential backups on the secondary for using versions between RTM and CU5, and after that it's not supported.
 --use Differential backup in the primary node.
 
+USE [Bak_Config]
+GO
 CREATE PROCEDURE [dbo].[Full_Backup_Databases_step1]
 as
 begin
@@ -31,15 +33,15 @@ IF @is_primary = @isPrimary and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
-		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
-		exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[reset_sequence] @type = 0
+		exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
+		exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
+		exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[reset_sequence] @type = 0
 	end
 	if @server_number = 1
 	begin
-		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
-		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
-		exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[reset_sequence] @type = 0
+		exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
+		exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[Insert_into_config] @type = 'F'
+		exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[reset_sequence] @type = 0
 	end
 waitfor delay '00:00:10'
 end
@@ -48,6 +50,7 @@ begin
 		exec [Bak_Config].[dbo].[sp_jobs_control_v02] @status = 0
 		exec [Bak_Config].[dbo].[Insert_into_config] @type = 'F'
 		exec [Bak_Config].[dbo].[reset_sequence] @type = 0
+waitfor delay '00:00:10'
 end
 end
 GO
@@ -55,31 +58,40 @@ GO
 CREATE PROCEDURE [dbo].[Full_Backup_Databases_step2]
 as
 begin
-declare @is_primary int, @server_number int, @isPrimary bit
-select @isPrimary = is_primary 
+declare @is_primary int, @server_number int, @Backup_Preferences bit
+select @Backup_Preferences = is_primary 
 from Backup_Preferences
- 
+
 select @is_primary = case when name = (select Primary_replica from sys.dm_hadr_availability_group_states) then 1 else 0 end,
 @server_number = left(reverse(substring(name,1,charindex('\', name)-1)),1)
 from sys.servers
 where server_id = 0
- 
-IF @is_primary = @isPrimary and @is_primary = 0
+
+select @is_primary, @Backup_Preferences
+
+IF @is_primary = @Backup_Preferences and @is_primary = 0
 begin
                 exec [Bak_Config].[dbo].[Backup_Database_v03] @backup_type = 'F', @server_type = @is_primary
                 if @server_number = 1
                 begin
-                                exec  [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                   exec  [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
                 end
                 else if @server_number = 2
                 begin
-                                exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                   exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
                 end
-else if @is_primary = @isPrimary and @is_primary = 1
+end
+else if @is_primary = @Backup_Preferences and @is_primary = 1
 begin
                 exec [Bak_Config].[dbo].[Backup_Database_v03] @backup_type = 'F', @server_type = @is_primary
-                exec  [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
-end
+                if @server_number = 1
+                begin
+                   exec  [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                end
+                else if @server_number = 2
+                begin
+                   exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[backup_database] @backup_type = 'F'
+                end
 end
 end
 GO
@@ -102,25 +114,27 @@ IF @is_primary = @isPrimary and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-	update [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] set 
+	update [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[config] set 
 	backup_end = getdate(), 
 	status = 1
 	where status = 0
 	and backup_type = 'F'
 
-	exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
-	exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
+	exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AZ-WE-SQL001\AZ_SP_DB].msdb.dbo.sp_start_job @job_name = 'Transaction_Log_Backup'
 	end
 	else if @server_number = 1
 	begin
-	update [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] set 
+	update [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[config] set 
 	backup_end = getdate(), 
 	status = 1
 	where status = 0
 	and backup_type = 'F'
 
-	exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
-	exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
+	exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
+	exec [AZ-WE-SQL002\AZ_SP_DB].msdb.dbo.sp_start_job @job_name = 'Transaction_Log_Backup'
 	end
 end
 else
@@ -133,12 +147,14 @@ else
 
 	exec [Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'F'
 	exec [Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'All', @status = 1
-end
 	exec msdb.dbo.sp_start_job @job_name = 'Transaction_Log_Backup'
+end
 end
 GO
 
-CREATE  PROCEDURE [dbo].[Differential_Backup_databases_step1]
+USE [Bak_Config]
+GO
+CREATE PROCEDURE [dbo].[Differential_Backup_databases_step1]
 as
 begin
 declare @is_primary int
@@ -195,17 +211,18 @@ begin
 	exec [Bak_Config].[dbo].[Delete_Expired_Backup_v02] @backup_type = 'D'
 
 	select 
-	@start_date = dateadd(minute, 15, backup_end),
-	@end_date = dateadd(minute, 15 * 40, backup_end)
+	@start_date = dateadd(hour, 1, backup_end),
+	@end_date = dateadd(hour, 1 * 23, backup_end)
 	from [Bak_Config].[dbo].[config]
 	where backup_type = 'D'
 	and status = 1
 	and backup_start in (select max(backup_start) from (select backup_start, backup_type from config where backup_type = 'D')a)
 
-	exec [Bak_Config].[dbo].[sp_change_job_schedule_v02] @job_name = 'Transaction_Log_Backup', @start = @start_date, @end = @end_date	
+	--exec [Bak_Config].[dbo].[sp_change_job_schedule_v02] @job_name = 'Transaction_Log_Backup', @start = @start_date, @end = @end_date	
 	exec [Bak_Config].[dbo].[sp_jobs_control_v02] @jobs = 'Transaction_Log_Backup', @status = 1
 end
 end
+
 GO
 
 CREATE PROCEDURE [dbo].[Transaction_Log_Backup_step1]
@@ -233,16 +250,16 @@ IF @is_primary = @isPrimary and @is_critical = 0 and @is_primary = 0
 begin
 	if @server_number = 2
 	begin
-		IF (select count(*) from [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
+		IF (select count(*) from [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
 		Begin
-			exec [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
+			exec [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
 		End
 	end
 	else if @server_number = 1
 	begin
-		IF (select count(*) from [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
+		IF (select count(*) from [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[config] where backup_type = 'L' and status = 0) = 0
 		Begin
-			exec [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
+			exec [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[Insert_into_Config] @type = 'L'
 		End
 	end
 waitfor delay '00:00:10'
@@ -318,7 +335,7 @@ begin
 	Begin
 		if @server_number = 2
 		begin
-			update [AMO-DBAMI01\DBAMI].[Bak_Config].[dbo].[config] set 
+			update [AZ-WE-SQL001\AZ_SP_DB].[Bak_Config].[dbo].[config] set 
 			backup_end = getdate(), 
 			status = 1
 			where status = 0
@@ -326,7 +343,7 @@ begin
 		end
 		else if @server_number = 1
 		begin
-			update [AMO-DBAMI02\DBAMI].[Bak_Config].[dbo].[config] set 
+			update [AZ-WE-SQL002\AZ_SP_DB].[Bak_Config].[dbo].[config] set 
 			backup_end = getdate(), 
 			status = 1
 			where status = 0
