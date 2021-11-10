@@ -2,6 +2,9 @@
 PFS page is tracking the LOB pages and heap tables free space, so i am choosing to using those pfs pages to get all pages with 
 the full utilization allocation pages and compare them with the sys.dm_db_database_page_allocations table-values build-in function 
 to match the belonged pages of the heap table to calculate the used space of the table.
+
+note. this is why there are contentions in Tempdb because the PFS pages, because PFS pages are used for tracking the heap tables and of course 99.0%
+of the #tables are heap.
 */
 
 CREATE Procedure sp_heap_table_utilization
