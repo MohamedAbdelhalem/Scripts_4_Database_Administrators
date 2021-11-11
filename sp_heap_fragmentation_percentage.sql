@@ -77,32 +77,22 @@ deallocate pages
 select * into #mapping_tab from @mapping_tab
 create nonclustered index idex_page_id_mapping_tab on #mapping_tab (page_id) include (id, free_space, page_status)
 
-select round(cast(sum(used) as float) / cast(total as float) * 100.0, 2) PCT_FULL
+select index_id, 
+case when index_id = 0 then 'heap' when index_id > 1 then 'nonclustered' end [type], pct_full, 
+case when index_id = 0 then 100 - pct_full else 0 end pct_framgent
 from (
-select page_id, cast(replace(free_space,'_PCT_FULL','') as int) used, count(*) over() * 100 total
-from #mapping_tab
-where page_id in (select allocated_page_page_id from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed')))a
-group by total
-
-/*
-after scripting the above, I found that the information of the percent full of each page related to Heap tables is already on 
-select object_id, allocated_page_page_id, page_free_space_percent 
-from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed');
-*/
+select index_id, case when index_id = 0 then round(cast(sum(used) as float) / cast(total as float) * 100.0, 2) else 0 end pct_full
+from (
+select page_id, index_id, cast(replace(free_space,'_PCT_FULL','') as int) used, count(*) over() * 100 total
+from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
+on t.page_id = p.allocated_page_page_id
+and t.file_id = p.allocated_page_file_id)a
+group by index_id, total)b
 
 select index_id, allocation_unit_type_desc, page_level, page_type_desc, page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
 from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
 on t.page_id = p.allocated_page_page_id
-and t.file_id = p.allocated_page_file_id
 
 drop table #mapping_tab
-
---select index_id, page_type, page_level, 
---sum(100 - cast(substring(free_space,1, charindex('_',free_space)-1)as int)), 
---sum(100 - cast(substring(free_space,1, charindex('_',free_space)-1)as int)) / (count(*) over() * 100) * 100, is_allocated
---from @mapping_tab p inner join sys.dm_db_database_page_allocations(db_id(), object_id(@Heap_Table),null,null,'detailed') dbpa
---on p.page_id = dbpa.allocated_page_page_id
---and p.file_id = dbpa.allocated_page_file_id
---group by index_id, page_type, page_level, is_allocated
 
 end
