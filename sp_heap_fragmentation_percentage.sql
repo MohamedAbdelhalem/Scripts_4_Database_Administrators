@@ -93,6 +93,7 @@ from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,nul
 select page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
 from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
 on t.page_id = p.allocated_page_page_id
+and t.file_id = p.allocated_page_file_id
 
 drop table #mapping_tab
 
@@ -103,10 +104,5 @@ drop table #mapping_tab
 --on p.page_id = dbpa.allocated_page_page_id
 --and p.file_id = dbpa.allocated_page_file_id
 --group by index_id, page_type, page_level, is_allocated
-
---select object_id, allocated_page_file_id, allocated_page_page_id, p.file_id, page_id, page_type_desc, page_level, free_space, is_allocated, page_status 
---from @mapping_tab p inner join sys.dm_db_database_page_allocations(db_id(), object_id('person.persons'),null,null,'detailed') dbpa
---on p.page_id = dbpa.allocated_page_page_id
---and p.file_id = dbpa.allocated_page_file_id
 
 end
