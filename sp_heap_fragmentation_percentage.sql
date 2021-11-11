@@ -90,7 +90,7 @@ select object_id, allocated_page_page_id, page_free_space_percent
 from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed');
 */
 
-select page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
+select index_id, allocation_unit_type_desc, page_level, page_type_desc, page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
 from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
 on t.page_id = p.allocated_page_page_id
 and t.file_id = p.allocated_page_file_id
