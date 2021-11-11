@@ -78,7 +78,7 @@ select * into #mapping_tab from @mapping_tab
 create nonclustered index idex_page_id_mapping_tab on #mapping_tab (page_id) include (id, free_space, page_status)
 
 select index_id, 
-case when index_id = 0 then 'heap' when index_id > 1 then 'nonclustered' end [type], pct_full, 
+case when index_id = 0 then 'heap' when index_id = 1 then 'clustered' when index_id > 1 then 'nonclustered' end [type], pct_full, 
 case when index_id = 0 then 100 - pct_full else 0 end pct_framgent
 from (
 select index_id, case when index_id = 0 then round(cast(sum(used) as float) / cast(total as float) * 100.0, 2) else 0 end pct_full
