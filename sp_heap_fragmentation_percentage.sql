@@ -74,7 +74,6 @@ end
 close pages
 deallocate pages
 
---drop table mapping_tab
 select * into #mapping_tab from @mapping_tab
 create nonclustered index idex_page_id_mapping_tab on #mapping_tab (page_id) include (id, free_space, page_status)
 
@@ -84,6 +83,12 @@ select page_id, cast(replace(free_space,'_PCT_FULL','') as int) used, count(*) o
 from #mapping_tab
 where page_id in (select allocated_page_page_id from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed')))a
 group by total
+
+/*
+after scripting the above, I found that the information of the percent full of each page related to Heap tables is already on 
+select object_id, allocated_page_page_id, page_free_space_percent 
+from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed');
+*/
 
 select page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
 from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
