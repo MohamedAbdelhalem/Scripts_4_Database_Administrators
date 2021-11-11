@@ -7,7 +7,7 @@ note. this is why there are contentions in Tempdb because the PFS pages, because
 of the #tables are heap.
 */
 
-CREATE Procedure sp_heap_table_utilization
+CREATE Procedure sp_heap_fragmentation_percentage
 (@pfss int = 6, @Heap_Table varchar(100))
 as
 begin
