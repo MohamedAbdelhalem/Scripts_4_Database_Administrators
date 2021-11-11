@@ -85,6 +85,10 @@ from #mapping_tab
 where page_id in (select allocated_page_page_id from sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed')))a
 group by total
 
+select page_id, allocated_page_page_id, free_space, page_free_space_percent, is_allocated, t.page_status
+from #mapping_tab t inner join sys.dm_db_database_page_allocations(db_id(),object_id(@Heap_Table),null,null,'detailed') p
+on t.page_id = p.allocated_page_page_id
+
 drop table #mapping_tab
 
 --select index_id, page_type, page_level, 
