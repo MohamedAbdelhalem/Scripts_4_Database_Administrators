@@ -90,7 +90,7 @@ select
 @columns = [columns] + case is_clustered when 1 then '' else ', [HEAP RID] binary(8)' end 
 from [dbo].[internal_index_columns](object_id(@table_name),@index_id)
 
-set @sql = 'create table #temp_index_total_pages (FileId int, PageId int, Row int, Level int, '+@columns+', [KeyHashValue] varchar(50), [Row Size] int)
+set @sql = 'Create Table #temp_index_total_pages (FileId tinyint, PageId int, Row smallint, Level tinyint, '+@columns+', [KeyHashValue] char(14), [Row Size] tinyint)
 declare @page_id int, @exec nvarchar(200)
 declare i cursor fast_forward
 for
