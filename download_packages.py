@@ -1,3 +1,9 @@
+#download packages from repository web pages with filter using Python
+#python3 download_packages.py
+#>>download
+#>>selinux
+#>>https://download.docker.com/linux/centos/7/source/stable/Packages/
+
 import os
 
 if __name__=="__main__":
