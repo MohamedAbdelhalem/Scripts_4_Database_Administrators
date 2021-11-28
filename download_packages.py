@@ -5,8 +5,9 @@ if __name__=="__main__":
     search=str(input())
     url=str(input())
     rpm=str()
-    rpms = list(open('postgreSQL.repo.txt'))
-    for i in rpms:
+    cmd="curl "+url
+    page=os.popen(cmd)
+    for i in page:
         if '.rpm' in i:
             rpm = i.split('>')[1]
             rpm = rpm[0:-3]
@@ -22,5 +23,3 @@ if __name__=="__main__":
                     print(cmd)
                 elif action == "download" and search in rpm:
                     os.system(cmd)
-
-
