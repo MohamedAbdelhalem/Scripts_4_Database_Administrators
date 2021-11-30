@@ -12,6 +12,21 @@ search=$2               #all or a name in the packages like sqlite or python3.
 dest=$3                 #where you want to download the packages to.
 url=$4                  #the original URL https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64/
 
+action=$(echo $action | xargs)
+search=$(echo $search | xargs)
+
+dest=$(echo $dest | xargs)
+ddest=$(echo ${dest:$((${#dest} - 1 )):1})
+if [[ ddest != "/" ]]; then
+        dest=$dest"/"
+fi
+
+url=$(echo $url | xargs)
+durl=$(echo ${url:$((${#url} - 1 )):1})
+if [[ durl != "/" ]]; then
+        url=$url"/"
+fi
+
 postrpms=($(curl $url | grep .rpm))
 filesno=$(echo ${#postrpms[@]})
 files=()
