@@ -1,4 +1,4 @@
-#and you need to download all or some rpms automatically 
+#and you need to download all or some rpms automatically
 #so you can use the below script 😉
 #examples
 #
@@ -7,9 +7,10 @@
 #sh ~/auto_download_rpms.sh view sqlite https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64/
 #sh ~/auto_download_rpms.sh view all https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64/
 
-action=$1               #view or download
-search=$2               #all or a name in the packages like sqlite or python3
-url=$3                  #the original URL https://download.postgresql.org/pub/repos/yum/12/redhat 
+action=$1               #type view or download
+search=$2               #all or a name in the packages like sqlite or python3.
+dest=$3                 #where you want to download the packages to.
+url=$4                  #the original URL https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64/
 
 postrpms=($(curl $url | grep .rpm))
 filesno=$(echo ${#postrpms[@]})
@@ -29,15 +30,15 @@ done
 for ((u=0; u<$(echo ${#files[@]}); u++)); do
         if [[ $search == "all" ]]; then
                 if [[ $action == "view" ]]; then
-                        echo curl -O $url${files[$u]}
+                        echo curl --output $dest${files[$u]} -O $url${files[$u]}
                 elif [[ $action == "download" ]]; then
-                        curl -O $url${files[$u]}
+                        curl --output $dest${files[$u]} -O $url${files[$u]}
                 fi
         else
                 if [[ $action == "view" && $(echo ${files[$u]}) == *"$search"* ]]; then
-                        echo curl -O $url${files[$u]}
+                        echo curl --output $dest${files[$u]} -O $url${files[$u]}
                 elif [[ $action == "download" && $(echo ${files[$u]}) == *"$search"* ]]; then
-                        curl -O $url${files[$u]}
+                        curl --output $dest${files[$u]} -O $url${files[$u]}
                 fi
         fi
 done
