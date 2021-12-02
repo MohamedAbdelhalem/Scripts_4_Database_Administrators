@@ -1,0 +1,43 @@
+resize the disk
+Troubleshooting
+Rescue a Red Hat Enterprise Linux system
+please make a seclection from the above
+1
+press Enter to get a shell
+lsblk
+df -h
+
+parted /dev/sdb
+print free
+q
+
+fdisk /dev/sdb
+n
+p
+enter = 2
+enter 
+enter
+
+t
+2
+8e
+w
+
+partprobe
+it will fail because the sr0 
+so reboot
+
+pvcreate /dev/sdb2
+pvscan
+
+vgextend vg_adbas_data /dev/sdb2
+
+vgs
+
+lvextend -l +100%FREE /dev/vg_adba_data/var
+xfs_growfs /dev/vg_adba_data/var
+df -h
+
+shutdown -now
+
+remove the iso
