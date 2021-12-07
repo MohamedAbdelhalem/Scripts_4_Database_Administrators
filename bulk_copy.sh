@@ -66,6 +66,6 @@ elif [ $flagfm == 0 ] | [ $action == "copy" ]; then
                 echo file ${list[$v]} transferred from $copyfm to $copyto successfully.
         done
 else
-        echo "Please add the source floder with right format /source/ or ./ for the current"
+        echo "Please add the source folder with right format /source/ or ./ for the current"
 fi
 
