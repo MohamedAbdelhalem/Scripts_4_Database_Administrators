@@ -1,3 +1,6 @@
+#sh bulk_copy.sh .py view ./ paython
+#sh bulk_copy.sh .py copy ./ paython
+
 search=$1
 action=$2
 copyfm=$3
