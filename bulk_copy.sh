@@ -42,8 +42,8 @@ if [[ $(echo ${copyfm:0:2}) == "./" ]]; then
         flagfm=$((flagfm - 1))
 fi
 
-echo $flagto
-echo $flagfm
+#echo $flagto
+#echo $flagfm
 
 if [[ $flagto == 1 ]]; then
         copyto=./$copyto
