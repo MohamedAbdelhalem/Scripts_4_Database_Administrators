@@ -1,6 +1,7 @@
 #we need to copy 150 python files from the current folder "./" or another folder to new one or a folder in the current path like 
 #scripts without putting ./scripts
 
+#sh bulk_copy.sh .py view ./ python_scripts
 #sh bulk_copy.sh .py view ./ /oracle/home/python_scripts
 #sh bulk_copy.sh .py copy ./ /oracle/home/python_scripts
 #sh bulk_copy.sh .py view /postgres/home/newproject/scripts/ /oracle/home/python_scripts
