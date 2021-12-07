@@ -1,6 +1,6 @@
 #we need to copy 150 python files from the current folder to new one
-#sh bulk_copy.sh .py view ./ /oracle/home/paython
-#sh bulk_copy.sh .py copy ./ /oracle/home/paython
+#sh bulk_copy.sh .py view ./ /oracle/home/python_scripts
+#sh bulk_copy.sh .py copy ./ /oracle/home/python_scripts
 
 search=$1
 action=$2
