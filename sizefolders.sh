@@ -1,3 +1,5 @@
+#by the way all of these lines of code to avoid any error when you have a folder with space like /home/postgres/python scripts/
+
 folder=$1
 v=0
 size=0
