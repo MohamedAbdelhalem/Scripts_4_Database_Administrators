@@ -1,0 +1,33 @@
+#Example to create a new user (appuser) with no permission and give him execute on a shell script.
+
+[root@localhost ~]# useradd appuser
+[root@localhost ~]# echo "password" | passwd --stdin appuser
+Changing password for user appuser.
+passwd: all authentication tokens updated successfully.
+[root@localhost ~]# 
+[root@localhost ~]# getfacl ./
+# file: .
+# owner: root
+# group: root
+user::r-x
+group::r-x
+other::---
+
+[root@localhost ~]# getfacl ./whatismyip.sh 
+# file: whatismyip.sh
+# owner: root
+# group: root
+user::rwx
+group::r--
+other::---
+
+[root@localhost ~]# setfacl -b ./
+[root@localhost ~]# setfacl -b ./whatismyip.sh 
+[root@localhost ~]# setfacl -m u:appuser:r ./whatismyip.sh 
+[root@localhost ~]# setfacl -m u:appuser:x ./ 
+[root@localhost ~]# pwd
+/root
+[root@localhost ~]# su - appuser
+[appuser@localhost ~]$ sh /root/whatismyip.sh 28
+172.20.10.3
+[appuser@localhost ~]$ 
