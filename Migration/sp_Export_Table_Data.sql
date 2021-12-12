@@ -7,7 +7,7 @@
 --and from 1..5 to MS SQL Server
 
 CREATE Procedure [dbo].[sp_Export_Table_Data]
-(@table varchar(250) = '[Sales].[SalesPerson]', @top varchar(20)= '0')
+(@table varchar(350), @top varchar(20)= '0')
 as
 begin
 declare @object_id int = object_id(@table), @table_id int
