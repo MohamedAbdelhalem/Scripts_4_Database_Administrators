@@ -1,4 +1,4 @@
-﻿USE [master]
+USE [master]
 GO
 CREATE Procedure [dbo].[sp_recommended_missing_indexes]
 as
