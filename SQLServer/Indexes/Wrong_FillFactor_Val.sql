@@ -24,3 +24,4 @@ and c.is_identity = 1
 group by c.name,c.is_identity, i.index_id, i.name, t.object_id, t.schema_id, t.name, i.type_desc, fill_factor, is_unique, is_unique_constraint  
 having count(*) = 1) as tab
 order by WRONG_FillFactor_Val
+
