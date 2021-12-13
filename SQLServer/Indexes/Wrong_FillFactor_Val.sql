@@ -2,7 +2,9 @@
 --in this case we are looking for indexes that are configured with non-default fill factor value (> 0) or (< 100%) but in identity columns 
 --either clustered or non-clustered indexes, because in this case there is no page split so we need to fill the index pages till the end.
 
-select index_id, index_name, index_column_name, object_id, table_name, index_type, WRONG_FillFactor_Val , RIGHT_FillFactor_Val, is_unique, is_unique_constraint  
+select index_id, index_name, index_column_name, object_id, table_name, index_type, 
+WRONG_FillFactor_Val , 
+RIGHT_FillFactor_Val, is_unique, is_unique_constraint  
 from (
 select count(*) c, 
 c.name index_column_name,c.is_identity, i.index_id, isnull(i.name,'') index_name, t.object_id, 
