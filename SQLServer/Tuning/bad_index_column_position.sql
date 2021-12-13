@@ -26,3 +26,5 @@ and (is_unique = 1 or is_unique_constraint = 1))a
 where is_identity = 1 
 and identity_column_position != 1
 order by table_name, index_name
+
+
