@@ -6,7 +6,8 @@
 
 --just alter the result of the indexes and reorder the keys and remove the fill factor = 100%
 
-select identity_column_position, index_column_name, is_identity, index_id, index_name, object_id, table_name, index_type, WRONG_FillFactor_Val, RIGHT_FillFactor_Val, is_unique, is_unique_constraint 
+select identity_column_position, index_column_name, is_identity, index_id, index_name, object_id, table_name, index_type, 
+WRONG_FillFactor_Val, RIGHT_FillFactor_Val, is_unique, is_unique_constraint 
 from (
 select row_number() over(partition by i.name, i.object_id order by i.object_id, i.name) identity_column_position,
 c.name index_column_name,c.is_identity, i.index_id, isnull(i.name,'') index_name, t.object_id, 
