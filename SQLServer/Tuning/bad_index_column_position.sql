@@ -2,7 +2,6 @@
 --run this query to get the indexes that have a key columns with the following attributes:
 --1. has identity column
 --2. the identity column is not the first key column
---3. and finally with fill factor > 0 and < 100
 
 --just alter the result of the indexes and reorder the keys and remove the fill factor = 100%
 
