@@ -26,7 +26,8 @@ and i.object_id = ic.object_id
 inner join sys.columns c
 on c.object_id = ic.object_id
 and c.column_id = ic.column_id
-where ic.is_included_column = 0)a
+where ic.is_included_column = 0
+and is_hypothetical = 0)a
 where is_identity = 1 
 and identity_column_position != 1
 order by table_name, index_name'
