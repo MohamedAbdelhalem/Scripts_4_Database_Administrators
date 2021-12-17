@@ -6,7 +6,11 @@
 --5. Cassandra
 --and from 1..5 to MS SQL Server
 
-CREATE Procedure [dbo].[sp_Export_Table_Data]
+--v2.1 fixing money conversion datatype
+--still fixing char nulls
+
+go
+CREATE or alter Procedure [dbo].[sp_Export_Table_Data]
 (@table varchar(350), @top varchar(20)= '0')
 as
 begin
@@ -133,14 +137,14 @@ set @col = cursor local
 for
 select lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
 case 
-when data_type = 'char'      then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar) = '-1' then 'max' else cast(character_maximum_length as varchar) end+')'
-when data_type = 'nchar'     then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar) = '-1' then 'max' else cast(character_maximum_length as varchar) end+')' 
-when data_type = 'varchar'   then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar) = '-1' then 'max' else cast(character_maximum_length as varchar) end+')' 
-when data_type = 'nvarchar'  then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar) = '-1' then 'max' else cast(character_maximum_length as varchar) end+')' 
+when data_type = 'char'      then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')'
+when data_type = 'nchar'     then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'varchar'   then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'nvarchar'  then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
 when data_type = 'text'      then '[varchar](8000)'
 when data_type = 'ntext'     then '[nvarchar](4000)'
 when data_type = 'bit'       then '['+data_type+']'
-when data_type = 'numeric'   then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar)+','+cast(NUMERIC_SCALE as varchar)+')'
+when data_type = 'numeric'   then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
 when data_type = 'money'     then '['+data_type+']' 
 when data_type = 'smallmoney'then '['+data_type+']'
 when data_type = 'uniqueidentifier' then '['+data_type+']'
@@ -160,19 +164,19 @@ when data_type = 'varchar'   then ''''+''''+''''+''''+'+isnull(@'+lower(column_n
 when data_type = 'nvarchar'  then '''N''+'+''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
 when data_type = 'text'      then ''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
 when data_type = 'ntext'     then '''N''+'+''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'bit'       then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'numeric'   then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'money'     then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'smallmoney'then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
+when data_type = 'bit'       then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'numeric'   then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'money'     then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallmoney'then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
 when data_type = 'uniqueidentifier'then ''''+''''+''''+''''+'+isnull(cast(@'+lower(column_name)+' as varchar(50)),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'float'     then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'int'       then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'bigint'    then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'smallint'  then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'tinyint'   then '+isnull(cast(@'+lower(column_name)+' as varchar),''NULL'')'
-when data_type = 'datetime'  then ''''+''''+''''+''''+'+isnull(convert(varchar(25),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'date'      then ''''+''''+''''+''''+'+isnull(convert(varchar(25),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'smalldate' then ''''+''''+''''+''''+'+isnull(convert(varchar(25),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'float'     then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'int'       then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'bigint'    then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallint'  then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'tinyint'   then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'datetime'  then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'date'      then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'smalldate' then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 end DATA_TYPE
 FROM INFORMATION_SCHEMA.columns c
 where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table_name
@@ -207,7 +211,6 @@ declare CURSOR_COLUMN cursor fast_forward
 for
 select top '+@TOP+' '+@V$select+'
 from '+@table_name+'
-
 open CURSOR_COLUMN
 fetch next from CURSOR_COLUMN into '+@V$variables+'
 while @@fetch_status = 0
@@ -217,7 +220,6 @@ begin
 --values 
 --('''+@V$values+')'')
 Select ''insert into '+@table_name+' ('+@V$SELECT+') VALUES ('''+@V$values+')''
-
 fetch next from CURSOR_COLUMN into '+@V$variables+'
 end
 close CURSOR_COLUMN
@@ -237,3 +239,4 @@ order by Row_no
 
 set nocount off
 end
+
