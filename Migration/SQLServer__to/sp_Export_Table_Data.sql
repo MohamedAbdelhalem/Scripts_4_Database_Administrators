@@ -4,15 +4,20 @@
 --3. MySQL
 --4. Mongodb
 --5. Cassandra
---and from 1..5 to MS SQL Server
 
 --v2.1 fixed money conversion datatype
 --v2.2 fixed Nchar/Nvarchar/NText nulls
+--     added computed columns and customized data types
 --v2.3 adding postgresql table conversion
 
-
-CREATE Procedure [dbo].[sp_Export_Table_Data]
-(@table varchar(350), @top varchar(20)= '0')
+CREATE Procedure [dbo].[sp_Export_Table_Data](
+@table varchar(350),                            -- table name included the schema name like [Sales].[SalesOrderHeader]
+@migratio_to varchar(300) = 'MS SQL Server',    -- it can be MSSQL, PostgreSQL, MySQL and Oracle (right now it's just SQL Server)
+@top varchar(20)= '0',                          -- obsoleted
+@with_computed int = 0,                         -- this to get the structure to be included the computed columns and customized data types
+@header bit = 1,                                -- 1 = table structure, 0 = data (records)
+@bulk int = 1000,                               -- number of records
+@patch int = 0)                                 -- patch sequence to extract to file
 as
 begin
 declare @object_id int = object_id(@table), @table_id int
@@ -43,7 +48,6 @@ from sys.tables
 WHERE object_id = @object_id
 order by name
 
-declare @col cursor
 declare @tab cursor
 
 open tab
@@ -60,9 +64,10 @@ set @v$column_desc = ''
 
 set @tab = cursor local
 for
-select '['+column_name+'] '+data_type+' '+case is_identity when 1 then 'identity(1,1)' else '' end+' '+DEFAULT_DATA+' '+case is_not_null when 1 then 'not null' else 'null' end+','
+select '['+column_name+'] '+case when @with_computed = 1 and is_computed = 1 then 'AS '+computed_def else data_type end+' '+case is_identity when 1 then 'identity(1,1)' else '' end+' '+DEFAULT_DATA+' '+
+case when @with_computed = 1 and is_computed = 1 then '' else case is_not_null when 1 then 'not null' else 'null' end end+','
 from (
-select c.column_id, '['+schema_name(t.schema_id)+'].['+t.name+']' table_name, c.name column_name, 
+select c.column_id, '['+schema_name(t.schema_id)+'].['+t.name+']' table_name, c.name column_name, comp.is_computed, comp.definition computed_def,
 tp.name , case 
 when tp.name = 'char'      then '['+tp.name+']'+'('+case when cast(c.max_length as varchar) = '-1' then 'max' else cast(c.max_length as varchar) end+')'
 when tp.name = 'nchar'     then '['+tp.name+']'+'('+case when cast(c.max_length as varchar) = '-1' then 'max' else cast(c.max_length as varchar) end+')' 
@@ -88,22 +93,32 @@ when tp.name = 'varbinary' then '['+tp.name+']'+'('+case when cast(c.max_length 
 when tp.name = 'binary'    then '['+tp.name+']'+'('+case when cast(c.max_length as varchar) = '-1' then 'max' else cast(c.max_length as varchar) end+')'
 when tp.name = 'real'      then '['+tp.name+']'
 when tp.name = 'image'     then '['+tp.name+']'
+else
+tp.name
 end data_type,
 case 
 when column_default is null then '' 
 when column_default like '%NEXT VALUE FOR%' then '' 
 else ' DEFAULT '+column_default 
 end DEFAULT_DATA, case c.is_nullable when 1 then 0 else 1 end is_not_null,
-case when column_default like '%NEXT VALUE FOR%' then 1 else IS_IDENTITY end IS_IDENTITY
+case when column_default like '%NEXT VALUE FOR%' then 1 else c.is_identity end is_identity
 FROM sys.columns c 
 inner join sys.tables t
 on t.object_id = c.object_id
-inner join sys.types tp
+inner join (
+select ut.user_type_id,  
+case when ut.is_user_defined = 1 and @with_computed = 1 then '['+schema_name(ut.schema_id)+'].['+ut.name+']' else utp.name end [name], 
+ut.max_length, ut.precision, ut.scale, ut.is_nullable
+from sys.types ut inner join sys.types utp
+on ut.system_type_id = utp.user_type_id)tp
 on c.user_type_id = tp.user_type_id
 inner join INFORMATION_SCHEMA.COLUMNS cs 
 on cs.COLUMN_NAME = c.name
-and object_id('['+cs.TABLE_SCHEMA+'].['+cs.TABLE_NAME+']') = c.object_id
-where t.object_id = @object_id)aa
+left outer join sys.computed_columns comp
+on c.column_id = comp.column_id
+and c.object_id = comp.object_id
+where object_id('['+cs.TABLE_SCHEMA+'].['+cs.TABLE_NAME+']') = c.object_id
+and t.object_id = @object_id)a
 union all
 SELECT 'CONSTRAINT ['+CONSTRAINT_NAME+'] PRIMARY KEY (['+COLUMN_NAME+']),'
 FROM [INFORMATION_SCHEMA].[KEY_COLUMN_USAGE] KC 
@@ -121,19 +136,25 @@ fetch next from @TAB into @COLUMN_DESC
 end
 close @tab
 
+
+--select @IS_IDENTITY = COUNT(*) 
+--from sys.tables
+--where name = @TABLE_NAME
+--if @IS_IDENTITY > 0
+--begin
+
+--Insert Into @result Select '
+--GO
+--SET IDENTITY_INSERT '+@TABLE_NAME+' ON'
+--end
+if @header = 1
+begin
 set @v$column_desc = substring(@v$column_desc , 1, len(@v$column_desc)-1)
 Insert Into @result Select 'create table '+@TABLE_NAME+' ('+@v$column_desc+')'
-
-select @IS_IDENTITY = COUNT(*) 
-from sys.tables
-where name = @TABLE_NAME
-if @IS_IDENTITY > 0
-begin
-
-Insert Into @result Select '
-GO
-SET IDENTITY_INSERT '+@TABLE_NAME+' ON'
 end
+else
+begin
+declare @col cursor
 set @col = cursor local
 for
 select lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
@@ -227,15 +248,17 @@ close CURSOR_COLUMN
 deallocate CURSOR_COLUMN')
 
 fetch next from tab into @table_name, @table_id
+deallocate @col
 end
 close tab
 
+end 
 deallocate tab
 deallocate @tab
-deallocate @col
 
 Select Output_Text 
 from @Result 
+where Row_no between ((@patch * @bulk) + 1) and ((@patch + 1) * @bulk)
 order by Row_no
 
 set nocount off
