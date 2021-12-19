@@ -7,7 +7,7 @@
 --and from 1..5 to MS SQL Server
 
 --v2.1 fixing money conversion datatype
---still fixing char nulls
+--still fixing Nchar/Nvarchar/NText nulls
 
 go
 CREATE or alter Procedure [dbo].[sp_Export_Table_Data]
