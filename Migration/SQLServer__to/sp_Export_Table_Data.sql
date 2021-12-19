@@ -12,7 +12,7 @@
 
 CREATE Procedure [dbo].[sp_Export_Table_Data](
 @table varchar(350),                            -- table name included the schema name like [Sales].[SalesOrderHeader]
-@migratio_to varchar(300) = 'MS SQL Server',    -- it can be MSSQL, PostgreSQL, MySQL and Oracle (right now it's just SQL Server)
+@migratio_to varchar(300) = 'MS SQL Server',    -- it can be MSSQL, PostgreSQL, MySQL, and Oracle (right now it's just SQL Server)
 @top varchar(20)= '0',                          -- obsoleted
 @with_computed int = 0,                         -- this to get the structure to be included the computed columns and customized data types
 @header bit = 1,                                -- 1 = table structure, 0 = data (records)
