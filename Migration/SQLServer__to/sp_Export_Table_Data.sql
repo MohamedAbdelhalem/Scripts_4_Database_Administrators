@@ -6,11 +6,12 @@
 --5. Cassandra
 --and from 1..5 to MS SQL Server
 
---v2.1 fixing money conversion datatype
---still fixing Nchar/Nvarchar/NText nulls
+--v2.1 fixed money conversion datatype
+--v2.2 fixed Nchar/Nvarchar/NText nulls
+--v2.3 adding postgresql table conversion
 
-go
-CREATE or alter Procedure [dbo].[sp_Export_Table_Data]
+
+CREATE Procedure [dbo].[sp_Export_Table_Data]
 (@table varchar(350), @top varchar(20)= '0')
 as
 begin
@@ -137,46 +138,46 @@ set @col = cursor local
 for
 select lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
 case 
-when data_type = 'char'      then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')'
-when data_type = 'nchar'     then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
-when data_type = 'varchar'   then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
-when data_type = 'nvarchar'  then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
-when data_type = 'text'      then '[varchar](8000)'
-when data_type = 'ntext'     then '[nvarchar](4000)'
-when data_type = 'bit'       then '['+data_type+']'
-when data_type = 'numeric'   then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
-when data_type = 'money'     then '['+data_type+']' 
-when data_type = 'smallmoney'then '['+data_type+']'
+when data_type = 'char'				then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')'
+when data_type = 'nchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'varchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'nvarchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'text'				then '[varchar](8000)'
+when data_type = 'ntext'			then '[nvarchar](8000)'
+when data_type = 'bit'				then '['+data_type+']'
+when data_type = 'numeric'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
+when data_type = 'money'			then '['+data_type+']' 
+when data_type = 'smallmoney'		then '['+data_type+']'
 when data_type = 'uniqueidentifier' then '['+data_type+']'
-when data_type = 'float'     then '['+data_type+']' 
-when data_type = 'int'       then '['+data_type+']' 
-when data_type = 'bigint'    then '['+data_type+']' 
-when data_type = 'smallint'  then '['+data_type+']' 
-when data_type = 'tinyint'   then '['+data_type+']' 
-when data_type = 'datetime'  then '['+data_type+']' 
-when data_type = 'date'      then '['+data_type+']' 
-when data_type = 'smalldate' then '['+data_type+']' 
+when data_type = 'float'			then '['+data_type+']' 
+when data_type = 'int'				then '['+data_type+']' 
+when data_type = 'bigint'			then '['+data_type+']' 
+when data_type = 'smallint'			then '['+data_type+']' 
+when data_type = 'tinyint'			then '['+data_type+']' 
+when data_type = 'datetime'			then '['+data_type+']' 
+when data_type = 'date'				then '['+data_type+']' 
+when data_type = 'smalldate'		then '['+data_type+']' 
 end DATA_TYPE,
 case 
-when data_type = 'char'      then ''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'nchar'     then '''N''+'+''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'varchar'   then ''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'nvarchar'  then '''N''+'+''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'text'      then ''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'ntext'     then '''N''+'+''''+''''+''''+''''+'+isnull(@'+lower(column_name)+',''NULL'')+'+''''+''''+''''+''''
-when data_type = 'bit'       then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'numeric'   then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'money'     then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'smallmoney'then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'uniqueidentifier'then ''''+''''+''''+''''+'+isnull(cast(@'+lower(column_name)+' as varchar(50)),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'float'     then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'int'       then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'bigint'    then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'smallint'  then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'tinyint'   then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
-when data_type = 'datetime'  then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'date'      then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
-when data_type = 'smalldate' then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'char'				then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'nchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'varchar'			then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'nvarchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'text'				then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'ntext'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'bit'				then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'numeric'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'money'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallmoney'		then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'uniqueidentifier'	then '+isnull('+''''''''''+'+cast(@'+lower(column_name)+' as varchar(50))+'+''''''''',''NULL'')+'+''
+when data_type = 'float'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'int'				then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'bigint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'tinyint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'date'				then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'smalldate'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 end DATA_TYPE
 FROM INFORMATION_SCHEMA.columns c
 where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table_name
@@ -239,4 +240,3 @@ order by Row_no
 
 set nocount off
 end
-
