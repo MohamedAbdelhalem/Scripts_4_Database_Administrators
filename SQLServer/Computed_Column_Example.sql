@@ -8,14 +8,14 @@ CREATE table Test_Posting (
 	postid int, 
 	postdate datetime default getdate(), 
 	remittence_number as 
-					 cast(id as varchar(10))+'-'+
-					 cast(postid as varchar(10))+'-'+
-					 case when month(postdate) between 1 and 6 
-				 		 	then right(cast(year(postdate) - 1 as varchar(10)),2) + right(cast(year(postdate) as varchar(10)),2)
-					 	 when month(postdate) between 7 and 12
-				 		 	then right(cast(year(postdate) as varchar(10)),2) + right(cast(year(postdate) + 1 as varchar(10)),2)
-				 	 end						
-					 )
+			cast(id as varchar(10))+'-'+
+			cast(postid as varchar(10))+'-'+
+			case when month(postdate) between 1 and 6 
+				then right(cast(year(postdate) - 1 as varchar(10)),2) + right(cast(year(postdate) as varchar(10)),2)
+			     when month(postdate) between 7 and 12
+				then right(cast(year(postdate) as varchar(10)),2) + right(cast(year(postdate) + 1 as varchar(10)),2)
+			end						
+			)
            
 INSERT into Test_Posting (postid,postdate) values (1232,'2021-01-13');
 INSERT into Test_Posting (postid,postdate) values (1232,'2021-02-18');
