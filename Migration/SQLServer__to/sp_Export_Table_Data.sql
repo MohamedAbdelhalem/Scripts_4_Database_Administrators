@@ -1,13 +1,15 @@
 --Migrate database from MS SQL Server to 
---1. Oracle
+--1. MS SQL Server 
 --2. PostgreSQL
 --3. MySQL
---4. Mongodb
---5. Cassandra
+--4. Oracle
+--5. Mongodb
+--6. Cassandra
 
 --v2.1 fixed money conversion datatype
 --v2.2 fixed Nchar/Nvarchar/NText nulls
 --     added computed columns and customized data types
+--     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
 
 CREATE Procedure [dbo].[sp_Export_Table_Data] (
