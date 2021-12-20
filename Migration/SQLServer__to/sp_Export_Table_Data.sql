@@ -1,4 +1,4 @@
---migrate database from MS SQL Server to 
+--Migrate database from MS SQL Server to 
 --1. Oracle
 --2. PostgreSQL
 --3. MySQL
@@ -10,14 +10,8 @@
 --     added computed columns and customized data types
 --v2.3 adding postgresql table conversion
 
-CREATE Procedure [dbo].[sp_Export_Table_Data](
-@table varchar(350),                            -- table name included the schema name like [Sales].[SalesOrderHeader]
-@migratio_to varchar(300) = 'MS SQL Server',    -- it can be MSSQL, PostgreSQL, MySQL, and Oracle (right now it's just SQL Server)
-@top varchar(20)= '0',                          -- obsoleted
-@with_computed int = 0,                         -- this to get the structure to be included the computed columns and customized data types
-@header bit = 1,                                -- 1 = table structure, 0 = data (records)
-@bulk int = 1000,                               -- number of records
-@patch int = 0)                                 -- patch sequence to extract to file
+CREATE Procedure [dbo].[sp_Export_Table_Data]
+(@table varchar(350), @migratio_to varchar(300) = 'MS SQL Server', @top varchar(20)= '0', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
 as
 begin
 declare @object_id int = object_id(@table), @table_id int
@@ -64,7 +58,7 @@ set @v$column_desc = ''
 
 set @tab = cursor local
 for
-select '['+column_name+'] '+case when @with_computed = 1 and is_computed = 1 then 'AS '+computed_def else data_type end+' '+case is_identity when 1 then 'identity(1,1)' else '' end+' '+DEFAULT_DATA+' '+
+select '['+column_name+'] '+case when @with_computed = 1 and is_computed = 1 then 'AS '+computed_def else data_type end+' '+case is_identity when 1 then 'identity(1,1) ' else '' end+DEFAULT_DATA+
 case when @with_computed = 1 and is_computed = 1 then '' else case is_not_null when 1 then 'not null' else 'null' end end+','
 from (
 select c.column_id, '['+schema_name(t.schema_id)+'].['+t.name+']' table_name, c.name column_name, comp.is_computed, comp.definition computed_def,
@@ -89,6 +83,7 @@ when tp.name = 'uniqueidentifier' then '['+tp.name+']'
 when tp.name = 'datetime'  then '['+tp.name+']' 
 when tp.name = 'date'      then '['+tp.name+']' 
 when tp.name = 'smalldate' then '['+tp.name+']' 
+when tp.name = 'smalldatetime' then '['+tp.name+']' 
 when tp.name = 'varbinary' then '['+tp.name+']'+'('+case when cast(c.max_length as varchar) = '-1' then 'max' else cast(c.max_length as varchar) end+')'
 when tp.name = 'binary'    then '['+tp.name+']'+'('+case when cast(c.max_length as varchar) = '-1' then 'max' else cast(c.max_length as varchar) end+')'
 when tp.name = 'real'      then '['+tp.name+']'
@@ -99,7 +94,7 @@ end data_type,
 case 
 when column_default is null then '' 
 when column_default like '%NEXT VALUE FOR%' then '' 
-else ' DEFAULT '+column_default 
+else 'DEFAULT '+column_default+' ' 
 end DEFAULT_DATA, case c.is_nullable when 1 then 0 else 1 end is_not_null,
 case when column_default like '%NEXT VALUE FOR%' then 1 else c.is_identity end is_identity
 FROM sys.columns c 
@@ -130,8 +125,7 @@ open @tab
 fetch next from @TAB into @COLUMN_DESC
 while @@FETCH_STATUS = 0
 begin
-set @v$column_desc = @v$column_desc+'
-'+@COLUMN_DESC
+set @v$column_desc = @v$column_desc+' '+@COLUMN_DESC
 fetch next from @TAB into @COLUMN_DESC
 end
 close @tab
@@ -154,9 +148,10 @@ Insert Into @result Select 'create table '+@TABLE_NAME+' ('+@v$column_desc+')'
 end
 else
 begin
-declare @col cursor
-set @col = cursor local
-for
+declare @table_structure table (column_name varchar(300), v_column_name varchar(300), data_type varchar(300), inserted_data_type varchar(1000))
+if @migratio_to = 'MS SQL Server'
+begin
+insert into @table_structure
 select lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
 case 
 when data_type = 'char'				then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')'
@@ -178,6 +173,7 @@ when data_type = 'tinyint'			then '['+data_type+']'
 when data_type = 'datetime'			then '['+data_type+']' 
 when data_type = 'date'				then '['+data_type+']' 
 when data_type = 'smalldate'		then '['+data_type+']' 
+when data_type = 'smalldatetime'	then '['+data_type+']' 
 end DATA_TYPE,
 case 
 when data_type = 'char'				then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
@@ -199,17 +195,80 @@ when data_type = 'tinyint'			then '+isnull(convert(varchar(50), @'+lower(column_
 when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 when data_type = 'date'				then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 when data_type = 'smalldate'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'smalldatetime'	then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 end DATA_TYPE
 FROM INFORMATION_SCHEMA.columns c
 where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table_name
 order by ordinal_position
+end
+else if @migratio_to = 'PostgreSQL'
+begin
+insert into @table_structure
+select lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
+case 
+when data_type = 'char'				then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')'
+when data_type = 'nchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'varchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'nvarchar'			then '['+data_type+']'+'('+case when cast(character_maximum_length as varchar(50)) = '-1' then 'max' else cast(character_maximum_length as varchar(50)) end+')' 
+when data_type = 'text'				then '[varchar](8000)'
+when data_type = 'ntext'			then '[nvarchar](8000)'
+when data_type = 'bit'				then '['+data_type+']'
+when data_type = 'numeric'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
+when data_type = 'money'			then '['+data_type+']' 
+when data_type = 'smallmoney'		then '['+data_type+']'
+when data_type = 'uniqueidentifier' then '['+data_type+']'
+when data_type = 'float'			then '['+data_type+']' 
+when data_type = 'int'				then '['+data_type+']' 
+when data_type = 'bigint'			then '['+data_type+']' 
+when data_type = 'smallint'			then '['+data_type+']' 
+when data_type = 'tinyint'			then '['+data_type+']' 
+when data_type = 'datetime'			then '['+data_type+']' 
+when data_type = 'date'				then '['+data_type+']' 
+when data_type = 'smalldate'		then '['+data_type+']' 
+when data_type = 'smalldatetime'	then '['+data_type+']' 
+end DATA_TYPE,
+case 
+when data_type = 'char'				then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'nchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'varchar'			then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'nvarchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'text'				then '+isnull('+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'ntext'			then '+isnull(''N''+'+''''''''''+'+@'+lower(column_name)+'+'''''''',''NULL'')+'+''
+when data_type = 'bit'				then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'numeric'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'money'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallmoney'		then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'uniqueidentifier'	then '+isnull('+''''''''''+'+cast(@'+lower(column_name)+' as varchar(50))+'+''''''''',''NULL'')+'+''
+when data_type = 'float'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'int'				then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'bigint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'smallint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'tinyint'			then '+isnull(convert(varchar(50), @'+lower(column_name)+', 2),''NULL'')'
+when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'date'				then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'smalldate'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+when data_type = 'smalldatetime'	then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
+end DATA_TYPE
+FROM INFORMATION_SCHEMA.columns c
+where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table_name
+order by ordinal_position
+end
+
+
+declare @col cursor
+set @col = cursor local
+for
+select column_name, v_column_name, data_type, inserted_data_type 
+from @table_structure
+
 
 open @col
 fetch next from @col into @column_name , @vcolumn_name, @datatype, @values_datatype
 while @@FETCH_STATUS = 0
 begin
-set @V$declare = @V$declare + '
-'+@vcolumn_name+' '+@datatype+','
+--set @V$declare = @V$declare + '
+--'+@vcolumn_name+' '+@datatype+','
+set @V$declare = @V$declare+ @vcolumn_name+' '+@datatype+','
 set @V$select = @V$select +@column_name+','
 set @V$variables = @V$variables + @vcolumn_name+','
 SET @V$conca = @V$conca + @vcolumn_name+'+'
@@ -241,7 +300,7 @@ begin
 --('+@V$SELECT+') 
 --values 
 --('''+@V$values+')'')
-Select ''insert into '+@table_name+' ('+@V$SELECT+') VALUES ('''+@V$values+')''
+Select ''insert into '+@table_name+' ('+@V$SELECT+') VALUES ('''+@V$values+');''
 fetch next from CURSOR_COLUMN into '+@V$variables+'
 end
 close CURSOR_COLUMN
