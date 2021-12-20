@@ -8,10 +8,11 @@
 --v2.1 fixed money conversion datatype
 --v2.2 fixed Nchar/Nvarchar/NText nulls
 --     added computed columns and customized data types
---v2.3 adding postgresql table conversion
+--v2.3 added postgresql table conversion and data insertion
 
-ALTER Procedure [dbo].[sp_Export_Table_Data]
-(@table varchar(350), @migrate_to varchar(300) = 'MS SQL Server', @top varchar(20)= '0', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
+CREATE Procedure [dbo].[sp_Export_Table_Data] (
+@table varchar(350), @migrate_to varchar(300) = 'MS SQL Server', @top varchar(20)= '0', 
+@with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
 as
 begin
 declare @object_id int = object_id(@table), @table_id int
@@ -110,8 +111,8 @@ begin
 				and t.object_id = @object_id)a
 	union all
 	select 'CONSTRAINT ['+constraint_name+'] PRIMARY KEY ('
-                              +isnull('['+[1]+']','')+isnull(',['+[2]+']','')+isnull(',['+[3]+']','')+isnull(',['+[4]+']','')+
-															isnull(',['+[5]+']','')+isnull(',['+[6]+']','')+isnull(',['+[7]+']','')+isnull(',['+[8]+']','')+'),'
+                              +isnull( '['+[1]+']','')+isnull(',['+[2]+']','')+isnull(',['+[3]+']','')+isnull(',['+[4]+']','')+
+			       isnull(',['+[5]+']','')+isnull(',['+[6]+']','')+isnull(',['+[7]+']','')+isnull(',['+[8]+']','')+'),'
 	from (
 	select top 100 percent constraint_name, column_name, ordinal_position
 	from [information_schema].[key_column_usage] kc 
@@ -192,8 +193,8 @@ begin
 				and t.object_id = @object_id)a
 	union all
 	select 'CONSTRAINT '+constraint_name+' PRIMARY KEY ('
-                                                +isnull(    [1],'')+isnull(','+[2],'')+isnull(','+[3],'')+isnull(','+[4],'')+
-														                     isnull(','+[5],'')+isnull(','+[6],'')+isnull(','+[7],'')+isnull(','+[8],'')+'),'
+                                              +isnull(    [1],'')+isnull(','+[2],'')+isnull(','+[3],'')+isnull(','+[4],'')+
+					       isnull(','+[5],'')+isnull(','+[6],'')+isnull(','+[7],'')+isnull(','+[8],'')+'),'
 	from (
 	select top 100 percent constraint_name, column_name, ordinal_position
 	from [information_schema].[key_column_usage] kc 
