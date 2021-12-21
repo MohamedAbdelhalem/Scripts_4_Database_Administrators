@@ -12,12 +12,17 @@
 --     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
 
-CREATE Procedure [dbo].[sp_Export_Table_Data] (
-@table varchar(350), @migrate_to varchar(300) = 'MS SQL Server', @top varchar(20)= '0', 
-@with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
+CREATE Procedure [dbo].[sp_Export_Table_Data]
+(@rows int output, @table varchar(350), @migrated_to varchar(300) = 'MS SQL Server', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
 as
 begin
-declare @object_id int = object_id(@table), @table_id int
+declare @object_id int
+
+select @object_id = object_id, @rows = max(rows)
+from sys.partitions
+where object_id = object_id(@table)
+group by object_id
+
 declare @result Table (Output_Text nvarchar(max), Row_no int identity(1,1))
 declare
 @table_name varchar(250),
@@ -48,7 +53,7 @@ set @v$values = ''
 set @v$column_desc = ''
 declare @table_structure table (id int identity(1,1), table_syntax nvarchar(500))
 
-if @migrate_to = 'MS SQL Server'
+if @migrated_to = 'MS SQL Server' and @object_id is not null
 begin
 	insert into @table_structure (table_syntax)
 	select '['+column_name+'] '+case when @with_computed = 1 and is_computed = 1 then 'AS '+computed_def else data_type end+' '+case is_identity when 1 then 'identity(1,1) ' else '' end+DEFAULT_DATA+
@@ -112,9 +117,8 @@ begin
 				where object_id('['+cs.TABLE_SCHEMA+'].['+cs.TABLE_NAME+']') = c.object_id
 				and t.object_id = @object_id)a
 	union all
-	select 'CONSTRAINT ['+constraint_name+'] PRIMARY KEY ('
-                              +isnull( '['+[1]+']','')+isnull(',['+[2]+']','')+isnull(',['+[3]+']','')+isnull(',['+[4]+']','')+
-			       isnull(',['+[5]+']','')+isnull(',['+[6]+']','')+isnull(',['+[7]+']','')+isnull(',['+[8]+']','')+'),'
+	select 'CONSTRAINT ['+constraint_name+'] PRIMARY KEY ('+isnull( '['+[1]+']','')+isnull(',['+[2]+']','')+isnull(',['+[3]+']','')+isnull(',['+[4]+']','')+
+															isnull(',['+[5]+']','')+isnull(',['+[6]+']','')+isnull(',['+[7]+']','')+isnull(',['+[8]+']','')+'),'
 	from (
 	select top 100 percent constraint_name, column_name, ordinal_position
 	from [information_schema].[key_column_usage] kc 
@@ -125,7 +129,7 @@ begin
 	pivot
 	(max(column_name) for ordinal_position in ([1],[2],[3],[4],[5],[6],[7],[8]))pvt
 end
-else if @migrate_to = 'PostgreSQL'
+else if @migrated_to = 'PostgreSQL' and @object_id is not null
 begin
 	insert into @table_structure (table_syntax)
 	select column_name+' '+case when @with_computed = 1 and is_computed = 1 then 'AS '+computed_def else data_type end+' '+DEFAULT_DATA+
@@ -194,9 +198,8 @@ begin
 				where object_id('['+cs.TABLE_SCHEMA+'].['+cs.TABLE_NAME+']') = c.object_id
 				and t.object_id = @object_id)a
 	union all
-	select 'CONSTRAINT '+constraint_name+' PRIMARY KEY ('
-                                              +isnull(    [1],'')+isnull(','+[2],'')+isnull(','+[3],'')+isnull(','+[4],'')+
-					       isnull(','+[5],'')+isnull(','+[6],'')+isnull(','+[7],'')+isnull(','+[8],'')+'),'
+	select 'CONSTRAINT '+constraint_name+' PRIMARY KEY ('+isnull(    [1],'')+isnull(','+[2],'')+isnull(','+[3],'')+isnull(','+[4],'')+
+														  isnull(','+[5],'')+isnull(','+[6],'')+isnull(','+[7],'')+isnull(','+[8],'')+'),'
 	from (
 	select top 100 percent constraint_name, column_name, ordinal_position
 	from [information_schema].[key_column_usage] kc 
@@ -207,6 +210,9 @@ begin
 	pivot
 	(max(column_name) for ordinal_position in ([1],[2],[3],[4],[5],[6],[7],[8]))pvt
 end
+
+if @object_id is not null
+begin
 
 set @tab = cursor local
 for
@@ -228,11 +234,11 @@ declare @insert_syntax table (column_name varchar(300), v_column_name varchar(30
 if @header = 1
 begin
 	set @v$column_desc = substring(@v$column_desc , 1, len(@v$column_desc)-1)
-	Insert Into @result Select 'Create Table '+case @migrate_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@v$column_desc+');'
+	Insert Into @result Select 'Create Table '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@v$column_desc+');'
 end
 else
 begin
-	if @migrate_to = 'MS SQL Server'
+	if @migrated_to = 'MS SQL Server'
 	begin
 		insert into @insert_syntax
 		select	lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
@@ -282,10 +288,10 @@ begin
 				when data_type = 'smalldatetime'	then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 				end DATA_TYPE
 		from INFORMATION_SCHEMA.columns c
-		where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table
+		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
 		order by ordinal_position
 	end
-	else if @migrate_to = 'PostgreSQL'
+	else if @migrated_to = 'PostgreSQL'
 	begin
 		insert into @insert_syntax
 		select	lower(COLUMN_NAME),lower('@'+COLUMN_NAME),
@@ -335,7 +341,7 @@ begin
 				when data_type = 'smalldatetime'	then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(column_name)+',121),''NULL'')+'+''''+''''+''''+''''
 				end DATA_TYPE
 		from INFORMATION_SCHEMA.columns c
-		where '['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']' = @table
+		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
 		order by ordinal_position
 	end
 
@@ -371,12 +377,12 @@ begin
 	declare CURSOR_COLUMN cursor fast_forward
 	for
 	select '+@V$select+'
-	from '+case @migrate_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+'
+	from '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+'
 	open CURSOR_COLUMN
 	fetch next from CURSOR_COLUMN into '+@V$variables+'
 	while @@fetch_status = 0
 	begin
-		Select ''insert into '+case @migrate_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@V$SELECT+') values ('''+@V$values+');''
+		Select ''insert into '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@V$SELECT+') values ('''+@V$values+');''
 	fetch next from CURSOR_COLUMN into '+@V$variables+'
 	end
 	close CURSOR_COLUMN
@@ -385,11 +391,16 @@ begin
 	exec(@sql)
 end
 
-Select Output_Text 
+Select Output_Text [--]
 from @Result 
 where Row_no between ((@patch * @bulk) + 1) and ((@patch + 1) * @bulk)
 order by Row_no
 
+end
+else
+begin
+print('This table does not exist, please re-enter the correct name with the schema name, like, dbo.table_name')
+end
 set nocount off
 
 end
