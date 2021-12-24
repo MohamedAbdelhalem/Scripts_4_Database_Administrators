@@ -12,7 +12,7 @@ Create Schema Sales authorization mssql;
 
 use [AdventureWorks2017]
 go
-exec [dbo].[sp_export_table_data] 
+exec [dbo].[sp_dump_table] 
 @table='Sales.SalesOrderHeader',
 @migrated_to='postgresql',
 @header=1,
@@ -80,13 +80,13 @@ for each row execute procedure fn_insert_into_salesorderheader_master();
 -- export the data from SQL Server using the below procedure to export and convert into postgresql 
 use [AdventureWorks2017]
 go
-exec [dbo].[sp_export_table_data] 
+exec [dbo].[sp_dump_table] 
 @table='Sales.SalesOrderHeader',
 @migrated_to='postgresql',
 @header=0,
 @with_computed=0,
 @bulk=10000,
-@patch=0 -- 0,1,2,3
+@patch=0 -- 0,1,2,3 table has 39,898 rows = 10,000 x 4 times
 
 -- copy the insert statements into postgresql
 -- then voila!
