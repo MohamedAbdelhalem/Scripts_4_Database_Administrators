@@ -8,7 +8,7 @@ Create User mssql encrypted password 'password';
 Create Database AdventureWorks2017 owner mssql;
 Create Schema Sales authorization mssql;
 
--- https://github.com/MohamedAbdelhalem/Scripts_4_Database_Administrators/blob/master/Migration/SQLServer__to/sp_Export_Table_Data.sql
+-- https://github.com/MohamedAbdelhalem/Scripts_4_Database_Administrators/blob/master/Migration/SQLServer__to/sp_dump_table.sql
 
 use [AdventureWorks2017]
 go
