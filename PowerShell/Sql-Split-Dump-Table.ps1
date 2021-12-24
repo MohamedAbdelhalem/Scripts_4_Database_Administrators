@@ -10,7 +10,7 @@ param (
 [int]$bulk
 )
 $path=""
-$query="exec [dbo].[sp_export_table_data] 
+$query="exec [dbo].[sp_dump_table] 
 @table='"+$table+"' ,
 @header="+$header+" ,
 @with_computed="+$computed+", 
@@ -46,7 +46,7 @@ for ($i = 0; $i -lt ([decimal]($rows*1.0) / [decimal]($bulk*1.0)); $i++)
 		    $directory = $directory+"\"
 	    }
         $path = $directory+$table+"-"+$migrated_to.replace(" ","").tolower()+"-"+"table.sql"
-        $query="exec [dbo].[sp_export_table_data] @table='"+$table+"',@migrated_to='"+$migrated_to+"',@header=1,@with_computed="+$computed+",@bulk="+$bulk+",@patch=0"
+        $query="exec [dbo].[sp_dump_table] @table='"+$table+"',@migrated_to='"+$migrated_to+"',@header=1,@with_computed="+$computed+",@bulk="+$bulk+",@patch=0"
         #$query
         #$path
         Invoke-Sqlcmd -ServerInstance $server -Database $database -Query $query | Out-File $path -Width 10240 | Format-Table -AutoSize -HideTableHeaders
@@ -56,7 +56,7 @@ for ($i = 0; $i -lt ([decimal]($rows*1.0) / [decimal]($bulk*1.0)); $i++)
 		$directory = $directory+"\"
 	}
     $path = $directory+$table+"-"+$migrated_to.replace(" ","").tolower()+"-"+$from+"-"+$to+".sql"
-    $query="exec [dbo].[sp_export_table_data] @table='"+$table+"',@migrated_to='"+$migrated_to+"',@header=0,@with_computed="+$computed+",@bulk="+$bulk+",@patch="+$i
+    $query="exec [dbo].[sp_dump_table] @table='"+$table+"',@migrated_to='"+$migrated_to+"',@header=0,@with_computed="+$computed+",@bulk="+$bulk+",@patch="+$i
     #$query
     #$path
     Invoke-Sqlcmd -ServerInstance $server -Database $database -Query $query | Out-File $path -Width 10240 | Format-Table -AutoSize -HideTableHeaders
