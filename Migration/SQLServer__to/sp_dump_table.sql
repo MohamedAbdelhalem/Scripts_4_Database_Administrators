@@ -23,7 +23,7 @@ from sys.partitions
 where object_id = object_id(@table)
 group by object_id
 
-declare @result Table (Output_Text nvarchar(max), Row_no int identity(1,1))
+declare @result Table (Output_Text nvarchar(max), Row_no int identity(1,1) primary key)
 declare
 @table_name varchar(250),
 @column_name varchar(250),
