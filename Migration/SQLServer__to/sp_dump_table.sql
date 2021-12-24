@@ -12,7 +12,7 @@
 --     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
 
-CREATE Procedure [dbo].[sp_Export_Table_Data]
+CREATE Procedure [dbo].[sp_dump_table]
 (@rows int output, @table varchar(350), @migrated_to varchar(300) = 'MS SQL Server', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
 as
 begin
