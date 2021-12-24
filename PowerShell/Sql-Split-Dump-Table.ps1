@@ -1,4 +1,4 @@
-Function Auto-Export-Table {
+Function Sql-Split-Dump-Table {
 param (
 [Parameter(Mandatory)]
 [string]$server,
@@ -70,5 +70,5 @@ for ($i = 0; $i -lt ([decimal]($rows*1.0) / [decimal]($bulk*1.0)); $i++)
 }
 }
 
-Auto-Export-Table -server . -database AdventureWorks2017 -table "Sales.Customer" -migrated_to "postgresql" -directory C:\Data\AdventureWorks2017 -bulk 1000 -computed 0
+Sql-Split-Dump-Table -server . -database AdventureWorks2017 -table "Sales.Customer" -migrated_to "postgresql" -directory C:\Data\AdventureWorks2017 -bulk 1000 -computed 0
 
