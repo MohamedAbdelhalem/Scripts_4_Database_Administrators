@@ -11,17 +11,20 @@
 --     added computed columns and customized data types
 --     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
+--v2.3 add new table name
 
 CREATE Procedure [dbo].[sp_dump_table]
-(@rows int output, @table varchar(350), @migrated_to varchar(300) = 'MS SQL Server', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
+(
+@table varchar(350)='sales.salesorderheader', 
+@new_name varchar(350) = 'default', 
+@migrated_to varchar(300) = 'MS SQL Server', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
 as
 begin
 declare @object_id int
 
-select @object_id = object_id, @rows = max(rows)
-from sys.partitions
+select @object_id = object_id
+from sys.tables
 where object_id = object_id(@table)
-group by object_id
 
 declare @result Table (Output_Text nvarchar(max), Row_no int identity(1,1) primary key)
 declare
@@ -234,7 +237,23 @@ declare @insert_syntax table (column_name varchar(300), v_column_name varchar(30
 if @header = 1
 begin
 	set @v$column_desc = substring(@v$column_desc , 1, len(@v$column_desc)-1)
-	Insert Into @result Select 'Create Table '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@v$column_desc+');'
+	Insert Into @result Select 'Create Table '+
+			case @migrated_to when 'MS SQL Server' 
+		then 
+			case 
+				when @new_name = 'default' or replace(replace(@new_name,']',''),'[','') = replace(replace(@table,']',''),'[','') then 
+					@table
+				else 
+					@new_name 
+			end
+		else 
+			case 
+				when @new_name = 'default' or replace(replace(@new_name,']',''),'[','') = replace(replace(@table,']',''),'[','') then 
+					replace(replace(@table,']',''),'[','')
+				else 
+					replace(replace(@new_name,']',''),'[','') 
+			end
+		end+' ('+@v$column_desc+');'
 end
 else
 begin
@@ -382,7 +401,23 @@ begin
 	fetch next from CURSOR_COLUMN into '+@V$variables+'
 	while @@fetch_status = 0
 	begin
-		Select ''insert into '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+' ('+@V$SELECT+') values ('''+@V$values+');''
+		Select ''insert into '+
+		case @migrated_to when 'MS SQL Server' 
+		then 
+			case 
+				when @new_name = 'default' and replace(replace(@new_name,']',''),'[','') = replace(replace(@table,']',''),'[','') then 
+					@table
+				else 
+					@new_name 
+			end
+		else 
+			case 
+				when @new_name = 'default' and replace(replace(@new_name,']',''),'[','') = replace(replace(@table,']',''),'[','') then 
+					replace(replace(@table,']',''),'[','')
+				else 
+					replace(replace(@new_name,']',''),'[','') 
+			end
+		end+' ('+@V$SELECT+') values ('''+@V$values+');''
 	fetch next from CURSOR_COLUMN into '+@V$variables+'
 	end
 	close CURSOR_COLUMN
