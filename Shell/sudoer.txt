@@ -1,5 +1,5 @@
 #how to allow user in the sudoer
-
+<span style="color: green"> Some green text </span>
 #[postgres@localhost ~]$ sudo yum install crontabs
 sudo yum install crontabs
 #[sudo] password for postgres: 
