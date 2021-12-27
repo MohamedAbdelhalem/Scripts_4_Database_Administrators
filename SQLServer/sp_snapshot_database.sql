@@ -27,7 +27,7 @@ fetch next from SS_Cursor into @LogicalName, @defaultpath ,@PhysicalName
 while @@FETCH_STATUS = 0
 begin
 set @sql = isnull(@sql+',','')+'
-(NAME = '+''''+@LogicalName+''''+', FILENAME = '+''''+@defaultpath+@PhysicalName+''''+')'
+(NAME = '+''''+@LogicalName+''''+', FILENAME = '+''''+case when @path = 'default' then @defaultpath else @path end+@PhysicalName+''''+')'
 fetch next from SS_Cursor into @LogicalName, @defaultpath ,@PhysicalName
 end
 close SS_Cursor 
@@ -38,6 +38,5 @@ CREATE DATABASE '+@db_name+'_'+@snapshot_name+'
 ON '+@sql+'
 AS SNAPSHOT OF '+@db_name
 exec (@sql)
---print (@sql)
+print (@sql)
 end
-
