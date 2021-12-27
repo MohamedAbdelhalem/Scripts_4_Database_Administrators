@@ -12,6 +12,7 @@
 --     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
 --v2.3 add new table name
+--v2.4 fixes column names with space 
 
 CREATE Procedure [dbo].[sp_dump_table]
 (
