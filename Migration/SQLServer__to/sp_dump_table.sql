@@ -399,7 +399,7 @@ begin
 		set @V$conca = @V$conca + @vcolumn_name+'+'
 		set @v$values = @v$values+' '+
 		case @datatype when '[xml]' then 
-		'''convert(xml,convert(varbinary(max),0x'''+@values_datatype+''', 2),2)'
+		'''convert(xml,convert(varbinary(max),0x'''+@values_datatype+''', 2),2)'''
 		else @values_datatype end+'+'',''+'
 	fetch next from @col into @column_name , @vcolumn_name, @datatype, @values_datatype
 	end
@@ -412,7 +412,7 @@ begin
 	set @V$variables_cursor = substring(@V$variables_cursor,1,len(@V$variables_cursor)-1)
 	set @V$insert_columns = substring(@V$insert_columns,1,len(@V$insert_columns)-1)
 	set @V$conca = substring(@V$conca,1,len(@V$conca)-1)
-	set @v$values = substring(@v$values, 1, len(@v$values)-5)
+	set @v$values = substring(@v$values, 1, len(@v$values)-3)
 	
 	declare @sql varchar(max)
 	set @sql = 'declare 
