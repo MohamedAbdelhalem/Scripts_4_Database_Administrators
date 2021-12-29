@@ -18,11 +18,16 @@ declare @loop int = 0, @min_page int, @max_page int, @file_id int, @sql varchar(
 
 while @loop < @pfss + 1
 begin
-select @pfs_page = iif(@loop = 0, 1, 8088 * @loop)
-set @sql = 'dbcc page (0,1,'+@pfs_page+',3) with tableresults'
-insert into @pfs (ParentObject, object, Field, VALUE)
-exec (@sql)
-set @loop = @loop + 1
+	select @pfs_page = iif(@loop = 0, 1, 8088 * @loop)
+	set @sql = 'dbcc page (0,1,'+@pfs_page+',3) with tableresults'
+	begin try
+		insert into @pfs (ParentObject, object, Field, VALUE)
+		exec (@sql)
+		set @loop = @loop + 1
+	end try
+	begin catch
+		print('there is no page with this number')
+	end catch
 end
 
 declare pages cursor fast_forward
