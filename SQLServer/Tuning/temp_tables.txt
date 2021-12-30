@@ -1,0 +1,66 @@
+* OBJECT CONTENTION
+- Turn on trace flags 1117 and 1118 if you in 2014 version or earlier (default behaviour in 2016).
+
+- If you in 2016 version turn on trace flag 3427.
+
+- Object allocation bottlenecks by tracing PAGELATCH waits on page resources 
+2:X:1 (PFS), 
+2:X:3 (SGAM), or 
+2:X:<some multiple of 8088> (also PFS) where X is a file number. 
+
+- Having multiple files and those files must be in the same size to make each new object allocation hits a different file, and thus a different PFS page, 
+in a round robin fashion.
+
+- A new round robin mechanism introduced as a fix for some cases that does not compliance and it is spreading the object allocations across the entirety 
+  of the files rather than filling them from the beginning to the end, this fix in the below versions
+  SQL 2016
+    SP1 - CU9
+    SP2 - CU1
+  SQL 2017
+    CU7
+  https://msdntnarchive.blob.core.windows.net/media/2018/06/062918_1608_TEMPDBFiles1.png
+
+- Shrinking database with the above new feature will may take longer because it will need to relocate data to the beginning of the file. 
+  In fact, if temp tables are still being created during the shrink operation, you may not be able to shrink the files much at all.
+  
+* METADATA CONTENTION
+- by creating many tables and need to inserted into the system tables to track the temp tables.
+- contention on the deletes from the cache (*when you drop temp tables from sysobjvalues*) in SQL 2016 because of the increase in table metadata 
+  that comes along with some of the new features implemented in this version. Features like temporal tables and Always Encrypted 
+  require additional metadata, and even though most of your temp tables aren't going to use these features.
+  https://msdntnarchive.blob.core.windows.net/media/2018/06/062918_1608_TEMPDBFiles2.png
+  
+- the behaviour before was synchronous and now it's asynchronous this means that when the changes happened after creating the temp table 
+  like adding indexes, add column, or an explicity drop the temp table, etc..., it just moved to a deleted list and dropped later by another thread. 
+- this behaviour just works within stored procedures only not asynchronous for ad-hoc created temp tables.
+- also this behaviour reducing the helper threads to one per each NUMA Node, this means you need to configure multi-NUMA Nodes for the instance
+- to drop a temp table was requesting an exclusive latch when searching for rows of metadata, but now it requests for shared lock if searching then if the 
+  rows have found then exclusively acquire a lock.
+
+*To improve the tempdb contention*
+  1- Do not explicitly drop temp tables at the end of a stored procedure, they will get cleaned up when the session that created them ends.
+  2- Do not alter temp tables after they have been created.
+  3- Do not truncate temp tables.
+  4- Move index creation statements on temp tables to the new inline index creation syntax that was introduced in SQL Server 2014.
+  5- instead of #temp_table replace it with variable tables @temp_table.
+  6- specialy if the data in the table is less than 100 then variable tables use @temp_table.
+  7- the characteristics of the varibale table is no Statistics for it and if you use a sensitive data then enable TF 2453.
+  8- in SQL 2016 starting to use a new Concept in tempdb, to auditing and that makes an overhead in the system, so particularly in workloads 
+     that do heavy inserts and updates in temp tables.  you can enable trace flag 3427 to bypass this overhead starting with SP1 CU2. 
+     Starting in SQL Server 2016 SP2 CU2 and SQL Server 2017 CU4, we automatically bypass this code if CCC is disabled.
+  9- the new concept in tempdb that it has its own cache it the creation of the #temp is by Stored Procedure, but in some cases caching is invalidate if 
+     after the creating you use alter #table or create index, in this situation, you may experience the following issues:
+      1- Data Definition Language (DDL) contention in the tempdb on system catalog sysobjvalues and large number of sessions 
+      that are waiting on the PAGELATCH_EX, PAGELATCH_SH and PAGELATCH_UP wait type occur.
+      2- This situation also affects the workload when the entries count is more than 4,000. However, 
+      this may vary, depending on the workload. See the following example:
+      
+      SELECT [name], [type], [entries_count], [entries_in_use_count]
+      FROM sys.dm_os_memory_cache_counters
+      WHERE [type] = N'CACHESTORE_TEMPTABLES' 
+      
+      In this situation 👆🏻fixed in Cumulative Update 5 for SQL Server 2017 and Cumulative update 8 for SQL Server 2016 SP1.
+     
+     
+*PAGELATCH_EX*
+- its done when you will delete or update a record from a page and to remove a record from a page, you must get exclusive access to that page in memory. 
