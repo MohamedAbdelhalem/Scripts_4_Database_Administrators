@@ -1,4 +1,0 @@
-1- Do not explicitly drop temp tables at the end of a stored procedure, they will get cleaned up when the session that created them ends.
-2- Do not alter temp tables after they have been created.
-3- Do not truncate temp tables
-4- Move index creation statements on temp tables to the new inline index creation syntax that was introduced in SQL Server 2014.
