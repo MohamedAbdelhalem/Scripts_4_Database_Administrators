@@ -15,7 +15,20 @@
 --v2.4 fixed column names with space 
 --v2.4 added XML to SQL Server 
 --v2.5 added where condition parameter to select a specific rows
+  
+exec [dbo].[sp_dump_table]
+@table = '[Sales].[SalesOrderDetail]', 
+@new_name = '[dbo].[SalesOrderDetail]', 
+@migrated_to = 'MS SQL Server', 
+@where_records_condition = 'where productid = 772 
+and OrderQty > 5
+order by OrderQty desc',
+@with_computed = 0, 
+@header = 0, 
+@bulk = 1000, 
+@patch = 0
 
+GO
 CREATE Procedure [dbo].[sp_dump_table]
 (
 @table varchar(350), 
