@@ -14,12 +14,18 @@
 --v2.3 add new table name
 --v2.4 fixed column names with space 
 --v2.4 added XML to SQL Server 
+--v2.5 added where condition parameter to select a specific rows
 
 CREATE Procedure [dbo].[sp_dump_table]
 (
-@table varchar(350)='sales.salesorderheader', 
+@table varchar(350), 
 @new_name varchar(350) = 'default', 
-@migrated_to varchar(300) = 'MS SQL Server', @with_computed int = 0, @header bit = 1, @bulk int = 1000, @patch int = 0)
+@migrated_to varchar(300) = 'MS SQL Server', 
+@where_records_condition varchar(300) = 'default',
+@with_computed int = 0, 
+@header bit = 1, 
+@bulk int = 1000, 
+@patch int = 0)
 as
 begin
 declare @object_id int
@@ -387,14 +393,14 @@ begin
 	fetch next from @col into @column_name , @vcolumn_name, @datatype, @values_datatype
 	while @@FETCH_STATUS = 0
 	begin
-		set @V$declare = @V$declare+ @vcolumn_name+' '+case @datatype when '[xml]' then '[varchar](max)' else @datatype end+','
+		set @V$declare = @V$declare+ @vcolumn_name+' '+case @datatype when '[xml]' then '[nvarchar](max)' else @datatype end+','
 		set @V$insert_columns = @V$insert_columns + '['+@column_name+'],'
 		set @V$select = @V$select + case @datatype when '[xml]' 
-		then 'isnull(convert(varchar(max),convert(varbinary(max),'+lower(case when charindex(' ',@column_name) > 0 
+		then 'isnull(convert(nvarchar(max),convert(varbinary(max),'+lower(case when charindex(' ',@column_name) > 0 
 		then replace('['+@column_name+']',' ','') else '['+@column_name+']' end)+',2),2),''NULL'')' else '['+@column_name+']' end+','
 		set @V$variables_cursor = @V$variables_cursor +'@'+@column_name+','
 		set @V$variables = @V$variables + case @datatype when '[xml]' 
-		then 'isnull(convert(varchar(max),convert(varbinary(max),'+lower(case when charindex(' ',@column_name) > 0 
+		then 'isnull(convert(nvarchar(max),convert(varbinary(max),'+lower(case when charindex(' ',@column_name) > 0 
 		then replace('@'+@column_name,' ','') else '@'+@column_name end)+',2),2),''NULL'')' else '@'+@column_name end+','
 		set @V$conca = @V$conca + @vcolumn_name+'+'
 		set @v$values = @v$values+' '+
@@ -421,6 +427,7 @@ begin
 	for
 	select '+@V$select+'
 	from '+case @migrated_to when 'MS SQL Server' then @table else replace(replace(@table,']',''),'[','') end+'
+	'+case when isnull(@where_records_condition,'default') = 'default' then '' else @where_records_condition end+' 
 	open CURSOR_COLUMN
 	fetch next from CURSOR_COLUMN into '+@V$variables_cursor+'
 	while @@fetch_status = 0
