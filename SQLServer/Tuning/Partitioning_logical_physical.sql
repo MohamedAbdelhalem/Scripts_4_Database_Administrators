@@ -20,9 +20,12 @@ alter database dwh add filegroup fg_FactSalesBranch10
 alter database dwh add filegroup fg_FactSalesBranch11
 alter database dwh add filegroup fg_FactSalesBranch12
 alter database dwh add filegroup fg_FactSalesBranch13
-
-alter database dwh add file (name='dwh_FSAllBranches', filename ='C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\DATA\dwh_fsallbranches.ndf',size=400mb,filegrowth=8mb) to filegroup fg_FactSalesBranch01
-alter database dwh add file (name='dwh_FSAllBranches2', filename ='C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\DATA\dwh_fsallbranches2.ndf',size=400mb,filegrowth=8mb) to filegroup fg_FactSalesAllBranches
+go
+alter database dwh add file (
+name='dwh_FSAllBranches2', 
+filename ='C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\DATA\dwh_fsallbranches2.ndf',
+size=400mb,
+filegrowth=8mb) to filegroup fg_FactSalesAllBranches
 go
 alter database dwh add file (name='dwh_fsbranch01', filename ='C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\DATA\dwh_fsb01.ndf',size=100mb,filegrowth=8mb) to filegroup fg_FactSalesBranch01
 alter database dwh add file (name='dwh_fsbranch02', filename ='C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\DATA\dwh_fsb02.ndf',size=100mb,filegrowth=8mb) to filegroup fg_FactSalesBranch02
