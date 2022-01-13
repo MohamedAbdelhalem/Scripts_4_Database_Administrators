@@ -46,6 +46,9 @@ create partition function pf_FactSalesAllBranches(int)
 as
 range right for values 
 (1,2,3,4,5,6,7,8,9,10,11,12,13)
+
+go --alter the partition function later but after you insert branchid 14 in dbo.FactSales_PT.
+
 ALTER PARTITION FUNCTION pf_FactSalesAllBranches ()  
 SPLIT RANGE (14);  
 go
