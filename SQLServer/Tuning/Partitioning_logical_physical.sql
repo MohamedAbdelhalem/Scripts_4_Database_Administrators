@@ -123,13 +123,17 @@ inner join sys.tables t
 on t.object_id = p.object_id
 where '['+schema_name(schema_id)+'].['+t.name+']' = '[dbo].[FactSales_PT]'
 
-truncate table [dbo].[FactSales_PT] with (partitions (5))
-
+TRUCATE TABLE [dbo].[FactSales_PT] WITH (PARTITIONS (5))
+--check after truncate the partition in milliseconds
 select top 10 * from [dbo].[FactSales_PT] where branchid = 3
 
+--Add new row with different branchid (14), and then you will see that the new record was allocated in the last partition
+--so alter the partition function to Split Range (14)
 select * from DimBranches
 insert into DimBranches values (14,14,'City','Region','Country')
 insert into [dbo].[FactSales_PT] values (1,5,14,8116955,51.000,5.99,305.49,0.000,0.00,0.2995)
+
+--to see that this record(s) are allocated in new pages regarding the spliting with different partition
 select 'dbcc page(0,'+fileid+','+pageid+',3)',
 * from (
 select 
@@ -139,8 +143,10 @@ cast(dbRecovery.dbo.Hex_to_Decimal_fn_dblog(substring(convert(varchar(50),%%phys
 * from [dbo].[FactSales_PT] where BranchId = 14)a
 
 select * from sys.dm_db_database_page_allocations(db_id(), object_id('[dbo].[FactSales_PT]'),5,null,'detailed')
-dbcc page(0,17,5136,3)
 
-dbcc traceon(3604)
+DBCC page(0,17,5136,3) -- data page 
+DBCC traceon(3604)
 create nonclustered index idx_branchid_factsales_pt on dbo.factsales_pt (branchid)
-dbcc page(0,17,170504,3)
+DBCC page(0,17,170504,3) -- index page
+
+
