@@ -44,7 +44,7 @@ in a round robin fashion.
   4- Move index creation statements on temp tables to the new inline index creation syntax that was introduced in SQL Server 2014.
   5- instead of #temp_table replace it with variable tables @temp_table.
   6- specialy if the data in the table is less than 100 then variable tables use @temp_table.
-  7- the characteristics of the varibale table is no Statistics for it and if you use a sensitive data then enable TF 2453.
+  7- the characteristics of the varibale table is no Statistics for it and if you use a sensitive data then enable TF 2453 or OPTION (RECOMPILE) <-- "better".
   8- in SQL 2016 starting to use a new Concept in tempdb, to auditing and that makes an overhead in the system, so particularly in workloads 
      that do heavy inserts and updates in temp tables.  you can enable trace flag 3427 to bypass this overhead starting with SP1 CU2. 
      Starting in SQL Server 2016 SP2 CU2 and SQL Server 2017 CU4, we automatically bypass this code if CCC is disabled.
