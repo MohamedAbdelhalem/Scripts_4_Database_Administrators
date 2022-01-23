@@ -15,6 +15,33 @@
 --v2.4 fixed column names with space 
 --v2.4 added XML to SQL Server 
 --v2.5 added where condition parameter to select a specific rows
+--v2.5 adding patches for big tables with xml
+--v2.5 adding feature to exclude columns from the insert statement (dump table)
+
+declare @bulk int = 100000
+declare @table table (id int primary key, recid varchar(255))
+insert into @table 
+select top (2345678) row_number() over(order by [recid]) id, [recid] 
+from FBNK_FUNDS_TRANSFER#HIS
+order by [recid]
+
+--select count(*) over() - patch_id - count(*) over(order by id) unique_id, * 
+--from (
+--select id % @bulk patch_id, id, recid
+--from @table)a
+--where patch_id in (0,1)
+
+--create table msdb.dbo.[keys___FBNK_FUNDS_TRANSFER#HIS] (id int primary key, unique_id int, from_id bigint, to_id bigint, from_recid varchar(255), to_recid varchar(255))  
+--insert into msdb.dbo.[keys___FBNK_FUNDS_TRANSFER#HIS] 
+select row_number() over(order by unique_id desc) id, unique_id, min(id), max(id), min(recid), max(recid)
+from (
+select count(*) over() - patch_id - count(*) over(order by id) unique_id, * 
+from (
+select id % @bulk patch_id, id, recid
+from @table)a
+where patch_id in (0,1))b
+group by unique_id
+order by unique_id desc
 
 use [AdventureWorks2017]
 GO
