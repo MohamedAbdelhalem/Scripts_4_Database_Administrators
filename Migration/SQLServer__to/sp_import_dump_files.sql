@@ -18,7 +18,7 @@ declare @xp_cmdshell varchar(1000)
 declare @table table (output_text varchar(max))
 declare @export_files table (id int identity(1,1), dump_file_name varchar(2000), from_id bigint)
 set nocount on
-set @xp_cmdshell = 'xp_cmdshell ''dir cd '+@files_localtion+'''
+set @xp_cmdshell = 'xp_cmdshell ''dir cd '+@files_localtion+''''
 insert into @table
 exec (@xp_cmdshell)
 
