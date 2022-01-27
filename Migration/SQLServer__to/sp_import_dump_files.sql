@@ -11,7 +11,7 @@ ALTER TABLE [dbo].[table_insert_log] ADD  DEFAULT (getdate()) FOR [date_time]
 GO
 
 CREATE Procedure sp_import_dump_files
-(@db_name varchar(300), @files_localtion varchar(1000))
+(@server_ip varchar(100), @db_name varchar(300), @files_localtion varchar(1000))
 as
 begin
 declare @xp_cmdshell varchar(1000)
@@ -49,21 +49,10 @@ while @@FETCH_STATUS = 0
 begin
 if @id != @count_of_files
 begin
-	set @sql = 'xp_cmdshell ''sqlcmd -S 10.38.5.65 -E -d T24PROD_UAT -i T:\export\'+@dump+''''
+	set @sql = 'xp_cmdshell ''sqlcmd -S '+@server_ip+' -E -d '+@db_name+' -i '+@files_location+'\'+@dump+''''
 	print(@sql)
 	exec(@sql)
 	insert into msdb.dbo.table_insert_log (from_id,dump_file_name) values (@from_id, @dump)
---
-select id, msdb.dbo.format(from_id,-1) from_id, dump_file_name, date_time from msdb.dbo.table_insert_log order by id desc
-select id, msdb.dbo.format(from_id,-1) fromid, dump_file_name, date_time from msdb.dbo.table_insert_log order by from_id desc
-
-select a.id, msdb.dbo.format(a.from_id,-1) fromid, a.dump_file_name, a.date_time time_a, b.date_time time_b, convert(varchar(30), dateadd(s,datediff(s, a.date_time, b.date_time),'2000-01-01'),108) duration
-from msdb.dbo.table_insert_log a left outer join msdb.dbo.table_insert_log b
-on a.id + 1 = b.id
---order by duration desc --check the bulk insert speed
-order by a.date_time 
-
-
 end
 fetch next from i into @id, @dump, @from_id, @count_of_files
 end
@@ -71,4 +60,13 @@ close i
 deallocate i
 set nocount off
 end
+
+GO
+
+select a.id, msdb.dbo.format(a.from_id,-1) fromid, a.dump_file_name, 
+a.date_time time_a, b.date_time time_b, convert(varchar(30), dateadd(s,datediff(s, a.date_time, b.date_time),'2000-01-01'),108) duration
+from msdb.dbo.table_insert_log a left outer join msdb.dbo.table_insert_log b
+on a.id + 1 = b.id
+--order by duration desc --check the bulk insert speed
+order by a.date_time 
 
