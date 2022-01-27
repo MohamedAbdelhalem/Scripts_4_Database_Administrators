@@ -58,12 +58,13 @@ order by OrderQty desc',
 @patch = 0
 
 GO
-CREATE Procedure [dbo].[sp_dump_table]
+CREATE OR ALTER Procedure [dbo].[sp_dump_table]
 (
 @table varchar(350), 
 @new_name varchar(350) = 'default', 
 @migrated_to varchar(300) = 'MS SQL Server', 
 @where_records_condition varchar(300) = 'default',
+@columns varchar(3000) = 'all',
 @with_computed int = 0, 
 @header bit = 1, 
 @bulk int = 1000, 
@@ -345,7 +346,8 @@ begin
 				case 
 				when data_type = 'char'				then '+isnull('+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
 				when data_type = 'nchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
-				when data_type = 'varchar'			then '+isnull('+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
+				--when data_type = 'varchar'			then '+isnull('+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
+				when data_type = 'varchar'			then '+isnull('+''''''''''+'+replace(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+','''''''','''''''''''')+'''''''',''NULL'')+'+''
 				when data_type = 'nvarchar'			then '+isnull(''N''+'+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
 				when data_type = 'text'				then '+isnull('+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
 				when data_type = 'ntext'			then '+isnull(''N''+'+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
@@ -368,6 +370,7 @@ begin
 				end DATA_TYPE
 		from INFORMATION_SCHEMA.columns c
 		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
+		and column_name in (select ltrim(rtrim(value)) from dbo.Separator(@columns,','))
 		order by ordinal_position
 	end
 	else if @migrated_to = 'PostgreSQL'
@@ -495,10 +498,13 @@ begin
 	fetch next from CURSOR_COLUMN into '+@V$variables_cursor+'
 	end
 	close CURSOR_COLUMN
-	deallocate CURSOR_COLUMN'
+	deallocate CURSOR_COLUMN
+	commit transaction'
 	print(@sql)
+	Insert Into @Result values ('SET IMPLICIT_TRANSACTIONS ON')
 	Insert Into @Result
 	exec(@sql)
+	Insert Into @Result values ('COMMIT;')
 end
 
 Select Output_Text [--]
