@@ -498,8 +498,7 @@ begin
 	fetch next from CURSOR_COLUMN into '+@V$variables_cursor+'
 	end
 	close CURSOR_COLUMN
-	deallocate CURSOR_COLUMN
-	commit transaction'
+	deallocate CURSOR_COLUMN'
 	print(@sql)
 	Insert Into @Result values ('SET IMPLICIT_TRANSACTIONS ON')
 	Insert Into @Result
