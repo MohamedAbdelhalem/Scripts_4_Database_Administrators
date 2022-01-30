@@ -4,7 +4,6 @@ CREATE Procedure sp_export_dump_files(
 @table_name varchar(350),
 @new_name varchar(350),
 @migrated_to varchar(100),
-@where_records_condition varchar(3000),
 @columns varchar(3000),
 @bulk bigint)
 as
@@ -27,7 +26,7 @@ fetch next from exp_cur into @from_id, @to_id, @from_unique_column, @to_unique_c
 while @@FETCH_STATUS = 0
 begin
 
-set @bcp_sql = 'bcp "exec [dbo].[sp_dump_table] @table = '+''''+@table_name+''''+', @new_name = '+''''+@new_name+''''+', @columns = '+''''+@columns+''''+', @where_records_condition = ''where [recid] between '+''''+''''+@from_unique_column+''''+''''+' and '+''''+''''+@to_unique_column+''''+''''+' order by [recid]'',@with_computed = 0, @header = 0, @bulk = '+cast(@bulk as varchar(50))+'" queryout "'+@dump_files_location+'\'+@table_name+'_from_'+cast(@from_id as varchar(50))+'_to_'+cast(@to_id as varchar(50))+'.sql"  -d '+@db_name+' -T -n -c'
+set @bcp_sql = 'bcp "exec [dbo].[sp_dump_table] @table = '+''''+@table_name+''''+', @new_name = '+''''+@new_name+''''+', @columns = '+''''+@columns+''''+', @where_records_condition = ''where [recid] between '+''''+''''+@from_unique_column+''''+''''+' and '+''''+''''+@to_unique_column+''''+''''+' order by [recid]'',@with_computed = 0, @header = 0, @bulk = '+cast(@bulk + 5 as varchar(50))+'" queryout "'+@dump_files_location+'\'+@table_name+'_from_'+cast(@from_id as varchar(50))+'_to_'+cast(@to_id as varchar(50))+'.sql"  -d '+@db_name+' -T -n -c'
 print @bcp_sql
 exec xp_cmdshell @bcp_sql
 
