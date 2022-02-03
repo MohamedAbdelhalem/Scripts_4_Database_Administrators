@@ -123,7 +123,7 @@ inner join sys.tables t
 on t.object_id = p.object_id
 where '['+schema_name(schema_id)+'].['+t.name+']' = '[dbo].[FactSales_PT]'
 
-TRUCATE TABLE [dbo].[FactSales_PT] WITH (PARTITIONS (5))
+TRUNCATE TABLE [dbo].[FactSales_PT] WITH (PARTITIONS (5))
 --check after truncate the partition in milliseconds
 select top 10 * from [dbo].[FactSales_PT] where branchid = 3
 
