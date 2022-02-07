@@ -19,7 +19,8 @@ CREATE Procedure [dbo].[sp_restore_database_distribution_groups]
 @with_recovery			bit = 1,  
 @new_db_name			varchar(500)  = 'default',
 @percent			int = 5,
-@password			varchar(100)  = 'default')
+@password			varchar(100)  = 'default',
+@action				int = 1)
 as
 begin 
 declare @restor_loc_table		table (output_text varchar(max))
@@ -574,8 +575,19 @@ else 'NORECOVERY' end+', NOUNLOAD, STATS = '+cast(@percent as varchar)
 
 end
 
-print(@sql)
-exec(@sql)
+if @action = 1
+begin
+	print(@sql)
+end
+else if @action = 2
+begin
+	exec(@sql)
+end
+else if @action = 3
+begin
+	print(@sql)
+	exec(@sql)
+end
 
 fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType
 end
