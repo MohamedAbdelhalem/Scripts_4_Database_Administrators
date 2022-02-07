@@ -1,28 +1,21 @@
-USE [master]
-GO
-/****** Object:  StoredProcedure [dbo].[sp_restore_database_distribution]    Script Date: 2/3/2022 1:19:19 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER Procedure [dbo].[sp_restore_database_distribution_groups]
+CREATE Procedure [dbo].[sp_restore_database_distribution_groups]
 (
 @backupfile			varchar(max), 
 @filenumber			varchar(5) = 'all', 
-@option_01			int = 0,		-- the new location of all files (log, data, or archive) will be the same of the location in the file list regarding the backup file.
-@option_02			int = 0,		-- all file (primary (.mdf), log fils (.ldf), secondary file (.ndf), archive file in the same location.
+@option_01			int = 0,		   -- the new location of all files (log, data, or archive) will be the same of the location in the file list regarding the backup file.
+@option_02			int = 0,		   -- all file (primary (.mdf), log fils (.ldf), secondary file (.ndf), archive file in the same location.
 @restore_loc			varchar(500)  = 'default',
-@option_03			int = 0,		-- specify the data files folder (1 folder) and the same of the log files (1 folder too).
+@option_03			int = 0,		   -- specify the data files folder (1 folder) and the same of the log files (1 folder too).
 @restore_loc_data		varchar(500)  = 'default',
 @restore_loc_log		varchar(500)  = 'default',
 @option_04			int = 0,
 @number_of_files_per_type	varchar(100)  = 'default', --'2-4'  "2" is the file type id, and "4" is the number of files per location
 @restore_loction_groups		varchar(1000) = 'default', --'0-T:\SQLSERVER\Data\;1-J:\SQLSERVER\Data\;2-J:\SQLSERVER\Data\;2-K:\SQLSERVER\Data\;2-L:\SQLSERVER\Data\;2-M:\SQLSERVER\Data\;3-N:\SQLSERVER\Data\',
-							--"0,1,2,3" file type
-							-- 0 Log file .ldf
-							-- 1 primary file .mdf
-							-- 2 secondary file .ndf
-							-- 3 archive file
+							   --"0,1,2,3" file type
+							   -- 0 Log file .ldf
+							   -- 1 primary file .mdf
+							   -- 2 secondary file .ndf
+							   -- 3 archive file
 @with_recovery			bit = 1,  
 @new_db_name			varchar(500)  = 'default',
 @percent			int = 5,
@@ -35,96 +28,97 @@ declare @restor_loc_table_data_1	table (output_text varchar(max))
 declare @restor_loc_table_data_2	table (output_text varchar(max))
 declare @restor_loc_table_data_3	table (output_text varchar(max))
 declare @restor_loc_table_log		table (output_text varchar(max))
-declare @xp_cmdshell varchar(500), 
-@files_exist int, 
-@files_exist_data int, 
-@files_exist_log int, 
-@file_type varchar(5)
 declare 
-@sql				varchar(max), 
-@file_move			varchar(max), 
-@file_move_data			varchar(max), 
-@file_move_log			varchar(max), 
-@file					int, 
-@version				int,
-@logicalname			varchar(500), 
-@originalpath			varchar(max), 
-@physicalname			varchar(500),
-@ext				varchar(10),
-@unique_id			varchar(10),
-@Position				int, 
-@DatabaseName			varchar(500), 
-@BackupType				int,
-@lastfile				int
+@xp_cmdshell 		varchar(500), 
+@files_exist 		int, 
+@files_exist_data 	int, 
+@files_exist_log 	int, 
+@file_type 		varchar(5)
+declare 
+@sql			varchar(max), 
+@file_move		varchar(max), 
+@file_move_data		varchar(max), 
+@file_move_log		varchar(max), 
+@file			int, 
+@version		int,
+@logicalname		varchar(500), 
+@originalpath		varchar(max), 
+@physicalname		varchar(500),
+@ext			varchar(10),
+@unique_id		varchar(10),
+@Position		int, 
+@DatabaseName		varchar(500), 
+@BackupType		int,
+@lastfile		int
 
 declare @filelistonly_groups table (fileid int, LogicalName varchar(300), [location] varchar(1500), filename varchar(300), ext varchar(20), Type varchar(10)) 
 declare @headeronly table (
-BackupName			nvarchar(512),
-BackupDescription		nvarchar(255),
-BackupType			smallint,
-ExpirationDate 			datetime,
-Compressed			int,
-Position 			smallint,
-DeviceType 			tinyint,
-UserName 			nvarchar(128),
-ServerName 			nvarchar(128),
-DatabaseName 			nvarchar(512),
-DatabaseVersion 		int,
+BackupName		nvarchar(512),
+BackupDescription	nvarchar(255),
+BackupType		smallint,
+ExpirationDate 		datetime,
+Compressed		int,
+Position 		smallint,
+DeviceType 		tinyint,
+UserName 		nvarchar(128),
+ServerName 		nvarchar(128),
+DatabaseName 		nvarchar(512),
+DatabaseVersion 	int,
 DatabaseCreationDate 	datetime,
-BackupSize 			numeric(20,0),
-FirstLSN 			numeric(25,0),
-LastLSN 			numeric(25,0),
-CheckpointLSN 			numeric(25,0),
-DatabaseBackupLSN 		numeric(25,0),
-BackupStartDate 		datetime,
-BackupFinishDate 		datetime,
-SortOrder 			smallint,
-CodePage 			smallint,
-UnicodeLocaleId 		int,
-UnicodeComparisonStyle 		int,
-CompatibilityLevel 		tinyint,
-SoftwareVendorId 		int,
-SoftwareVersionMajor 		int,
-SoftwareVersionMinor 		int,
-SoftwareVersionBuild 		int,
-MachineName 			nvarchar(128),
-Flags 				int,
-BindingID 			uniqueidentifier,
-RecoveryForkID			uniqueidentifier,
-Collation 			nvarchar(128),
-FamilyGUID 			uniqueidentifier,
-HasBulkLoggedData 		bit,
-IsSnapshot			bit,
-IsReadOnly			bit,
-IsSingleUser 			bit,
-HasBackupChecksums		bit,
-IsDamaged 			bit,
-BeginsLogChain 			bit,
-HasIncompleteMetaData 		bit,
-IsForceOffline 			bit,
-IsCopyOnly 			bit,
-FirstRecoveryForkID 		uniqueidentifier,
-ForkPointLSN 			numeric(25,0),
-RecoveryModel 			nvarchar(60),
-DifferentialBaseLSN 		numeric(25,0),
-DifferentialBaseGUID 		uniqueidentifier,
-BackupTypeDescription 		nvarchar(60),
-BackupSetGUID 			uniqueidentifier,
-CompressedBackupSize 		bigint,
-containment 			tinyint,
-KeyAlgorithm 			nvarchar(32)  default NULL,
-EncryptorThumbprint 		varbinary(20)  default NULL,
-EncryptorType 			nvarchar(32))
+BackupSize 		numeric(20,0),
+FirstLSN 		numeric(25,0),
+LastLSN 		numeric(25,0),
+CheckpointLSN 		numeric(25,0),
+DatabaseBackupLSN 	numeric(25,0),
+BackupStartDate 	datetime,
+BackupFinishDate 	datetime,
+SortOrder 		smallint,
+CodePage 		smallint,
+UnicodeLocaleId 	int,
+UnicodeComparisonStyle 	int,
+CompatibilityLevel 	tinyint,
+SoftwareVendorId 	int,
+SoftwareVersionMajor 	int,
+SoftwareVersionMinor 	int,
+SoftwareVersionBuild 	int,
+MachineName 		nvarchar(128),
+Flags 			int,
+BindingID 		uniqueidentifier,
+RecoveryForkID		uniqueidentifier,
+Collation 		nvarchar(128),
+FamilyGUID 		uniqueidentifier,
+HasBulkLoggedData 	bit,
+IsSnapshot		bit,
+IsReadOnly		bit,
+IsSingleUser 		bit,
+HasBackupChecksums	bit,
+IsDamaged 		bit,
+BeginsLogChain 		bit,
+HasIncompleteMetaData 	bit,
+IsForceOffline 		bit,
+IsCopyOnly 		bit,
+FirstRecoveryForkID 	uniqueidentifier,
+ForkPointLSN 		numeric(25,0),
+RecoveryModel 		nvarchar(60),
+DifferentialBaseLSN 	numeric(25,0),
+DifferentialBaseGUID 	uniqueidentifier,
+BackupTypeDescription 	nvarchar(60),
+BackupSetGUID 		uniqueidentifier,
+CompressedBackupSize 	bigint,
+containment 		tinyint,
+KeyAlgorithm 		nvarchar(32)  default NULL,
+EncryptorThumbprint 	varbinary(20)  default NULL,
+EncryptorType 		nvarchar(32))
 
 declare @filelistonly table (
-LogicalName			varchar(1000),
-PhysicalName			varchar(max),
-Type				varchar(5),
-filegroup varchar(300), col02 varchar(max),col03 varchar(max),fileid int,
-col05 varchar(max),col06 varchar(max),col07 varchar(max),col08 varchar(max),
-col09 varchar(max),col10 varchar(max),col11 varchar(max),filetype int,
-col13 varchar(max),col14 varchar(max),col15 varchar(max),col16 varchar(max),
-col17 varchar(max),col18 varchar(max),col19 varchar(max))
+LogicalName	varchar(1000),
+PhysicalName	varchar(max),
+Type		varchar(5),
+filegroup 	varchar(300), col02 	varchar(max), col03 	varchar(max), fileid 	int,
+col05 		varchar(max), col06 	varchar(max), col07 	varchar(max), col08 	varchar(max),
+col09 		varchar(max), col10 	varchar(max), col11 	varchar(max), filetype 	int,
+col13 		varchar(max), col14 	varchar(max), col15 	varchar(max), col16 	varchar(max),
+col17 		varchar(max), col18 	varchar(max), col19 	varchar(max))
 
 set nocount on
 if @password = 'default'
@@ -150,119 +144,113 @@ end
 
 if @version = 12
 begin
-insert into @filelistonly (
-LogicalName,PhysicalName,Type,
-filegroup, col02, col03, fileid, col05, col06, col07, col08,
-col09, col10, col11, filetype, col13, col14, col15, col16,
-col17, col18)
-exec(@sql)
+	insert into @filelistonly (
+	LogicalName,PhysicalName,Type,
+	filegroup, col02, col03, fileid, col05, col06, col07, col08,
+	col09, col10, col11, filetype, col13, col14, col15, col16,
+	col17, col18)
+	exec(@sql)
 end
 else
 begin
-insert into @filelistonly 
-exec(@sql)
+	insert into @filelistonly 
+	exec(@sql)
 end
 
 if @password = 'default'
 begin
-set @sql = 'restore headeronly from disk = '+''''+@backupfile+''''
+	set @sql = 'restore headeronly from disk = '+''''+@backupfile+''''
 end
 else
 begin
-set @sql = 'restore headeronly from disk = '+''''+@backupfile+''''+' with file = 1, mediapassword = '+''''+@password+''''
+	set @sql = 'restore headeronly from disk = '+''''+@backupfile+''''+' with file = 1, mediapassword = '+''''+@password+''''
 end
-
 
 if @version = 10
 begin
-insert into @headeronly (
-BackupName,BackupDescription,BackupType,ExpirationDate,Compressed,Position,DeviceType,UserName,ServerName,
-DatabaseName,DatabaseVersion,DatabaseCreationDate,BackupSize,FirstLSN,LastLSN,CheckpointLSN,DatabaseBackupLSN,
-BackupStartDate,BackupFinishDate,SortOrder,CodePage,UnicodeLocaleId,UnicodeComparisonStyle,CompatibilityLevel,
-SoftwareVendorId,SoftwareVersionMajor,SoftwareVersionMinor,SoftwareVersionBuild,MachineName,Flags,BindingID,
-RecoveryForkID,Collation,FamilyGUID,HasBulkLoggedData,IsSnapshot,IsReadOnly,IsSingleUser,HasBackupChecksums,
-IsDamaged,BeginsLogChain,HasIncompleteMetaData,IsForceOffline,IsCopyOnly,FirstRecoveryForkID,ForkPointLSN,
-RecoveryModel,DifferentialBaseLSN,DifferentialBaseGUID,BackupTypeDescription,BackupSetGUID,CompressedBackupSize)
-exec(@sql)
+	insert into @headeronly (
+	BackupName,BackupDescription,BackupType,ExpirationDate,Compressed,Position,DeviceType,UserName,ServerName,
+	DatabaseName,DatabaseVersion,DatabaseCreationDate,BackupSize,FirstLSN,LastLSN,CheckpointLSN,DatabaseBackupLSN,
+	BackupStartDate,BackupFinishDate,SortOrder,CodePage,UnicodeLocaleId,UnicodeComparisonStyle,CompatibilityLevel,
+	SoftwareVendorId,SoftwareVersionMajor,SoftwareVersionMinor,SoftwareVersionBuild,MachineName,Flags,BindingID,
+	RecoveryForkID,Collation,FamilyGUID,HasBulkLoggedData,IsSnapshot,IsReadOnly,IsSingleUser,HasBackupChecksums,
+	IsDamaged,BeginsLogChain,HasIncompleteMetaData,IsForceOffline,IsCopyOnly,FirstRecoveryForkID,ForkPointLSN,
+	RecoveryModel,DifferentialBaseLSN,DifferentialBaseGUID,BackupTypeDescription,BackupSetGUID,CompressedBackupSize)
+	exec(@sql)
 end
 else if @version = 11
 begin
-insert into @headeronly (
-BackupName,BackupDescription,BackupType,ExpirationDate,Compressed,Position,DeviceType,UserName,ServerName,
-DatabaseName,DatabaseVersion,DatabaseCreationDate,BackupSize,FirstLSN,LastLSN,CheckpointLSN,DatabaseBackupLSN,
-BackupStartDate,BackupFinishDate,SortOrder,CodePage,UnicodeLocaleId,UnicodeComparisonStyle,CompatibilityLevel,
-SoftwareVendorId,SoftwareVersionMajor,SoftwareVersionMinor,SoftwareVersionBuild,MachineName,Flags,BindingID,
-RecoveryForkID,Collation,FamilyGUID,HasBulkLoggedData,IsSnapshot,IsReadOnly,IsSingleUser,HasBackupChecksums,
-IsDamaged,BeginsLogChain,HasIncompleteMetaData,IsForceOffline,IsCopyOnly,FirstRecoveryForkID,ForkPointLSN,
-RecoveryModel,DifferentialBaseLSN,DifferentialBaseGUID,BackupTypeDescription,BackupSetGUID,CompressedBackupSize,containment)
-exec(@sql)
+	insert into @headeronly (
+	BackupName,BackupDescription,BackupType,ExpirationDate,Compressed,Position,DeviceType,UserName,ServerName,
+	DatabaseName,DatabaseVersion,DatabaseCreationDate,BackupSize,FirstLSN,LastLSN,CheckpointLSN,DatabaseBackupLSN,
+	BackupStartDate,BackupFinishDate,SortOrder,CodePage,UnicodeLocaleId,UnicodeComparisonStyle,CompatibilityLevel,
+	SoftwareVendorId,SoftwareVersionMajor,SoftwareVersionMinor,SoftwareVersionBuild,MachineName,Flags,BindingID,
+	RecoveryForkID,Collation,FamilyGUID,HasBulkLoggedData,IsSnapshot,IsReadOnly,IsSingleUser,HasBackupChecksums,
+	IsDamaged,BeginsLogChain,HasIncompleteMetaData,IsForceOffline,IsCopyOnly,FirstRecoveryForkID,ForkPointLSN,
+	RecoveryModel,DifferentialBaseLSN,DifferentialBaseGUID,BackupTypeDescription,BackupSetGUID,CompressedBackupSize,containment)
+	exec(@sql)
 end
 else if @version > 11
 begin
-insert into @headeronly 
-exec(@sql)
+	insert into @headeronly 
+	exec(@sql)
 end
 
 if @option_04 = 1
 begin
+	insert into @filelistonly_groups (fileid, LogicalName, [location], [filename], ext, [Type])
+	select fileid,
+	LogicalName, originalPath, 
+	case when PhysicalName like '%.%' 
+	     then substring(PhysicalName, 1, charindex('.',PhysicalName)-1) else PhysicalName end PhysicalName,
+	case when PhysicalName like '%.%' 
+	     then reverse(substring(reverse(PhysicalName), 1, charindex('.',reverse(PhysicalName)))) else 'no_ext' end ext, type
+	from (
+		select LogicalName, type, fileid, loc OriginalPath, 
+		reverse(substring(reverse(PhysicalName), 1, charindex('\',reverse(PhysicalName))-1)) PhysicalName
+		from (
+			select LogicalName, PhysicalName, Type, loc.loc, files.fileid
+			from (
+			select LogicalName, PhysicalName, Type, filegroup, fileid, filetype, row_number() over(partition by filetype order by fileid) seq_id
+			from filelistonly_test
+			where filetype != dbo.Separator_Single(@number_of_files_per_type, '-', 1) 
+		) files left join (
+			select id, filetype, loc, row_number() over (partition by filetype order by filetype) location_id
+			from (
+				select id, dbo.Separator_Single(value, '-', 1) filetype, dbo.Separator_Single(value, '-', 2) loc
+				from dbo.separator(@restore_loction_groups,';'))a
+				where filetype != dbo.Separator_Single(@number_of_files_per_type, '-', 1)) loc
+		on files.filetype = loc.filetype
+		union all
+		select LogicalName, PhysicalName, Type, loc.loc, files.fileid
+		from (
+			select *, row_number() over(partition by seq order by fileid) file_group_id
+			from (
+				select LogicalName, PhysicalName, Type, filegroup, fileid, a.filetype, 
+				case when a.filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1) 
+				then case seq_id % cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int) 
+				when 0 then cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int) 
+				else seq_id % cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int)
+				end else 0 end seq 
+				from (
+				select LogicalName, PhysicalName, Type, filegroup, fileid, filetype, row_number() over(partition by filetype order by fileid) seq_id
+				from @filelistonly
+				where filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1) 
+				)a)b) files inner join (
+					select id, filetype, loc, row_number() over (partition by filetype order by filetype) location_id
+					from (
+						select id, dbo.Separator_Single(value, '-', 1) filetype, dbo.Separator_Single(value, '-', 2) loc
+						from dbo.separator(@restore_loction_groups,';'))a
+					where filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1)) loc
+				on files.filetype = loc.filetype
+				and files.file_group_id = loc.location_id)a)b
+		order by fileid
 
-insert into @filelistonly_groups (fileid, LogicalName, [location], [filename], ext, [Type])
-select fileid,
-LogicalName, originalPath, 
-case when PhysicalName like '%.%' then 
-		substring(PhysicalName, 1, charindex('.',PhysicalName)-1) else PhysicalName end PhysicalName,
-case when PhysicalName like '%.%' then 
-		reverse(substring(reverse(PhysicalName), 1, charindex('.',reverse(PhysicalName)))) else 'no_ext' end ext,
-		type
-from (
-select LogicalName, type, fileid,
-loc OriginalPath, 
-reverse(substring(reverse(PhysicalName), 1, charindex('\',reverse(PhysicalName))-1)) PhysicalName
-from (
-select LogicalName, PhysicalName, Type, loc.loc, files.fileid
-from (
-select LogicalName, PhysicalName, Type, filegroup, fileid, filetype, row_number() over(partition by filetype order by fileid) seq_id
-from filelistonly_test
-where filetype != dbo.Separator_Single(@number_of_files_per_type, '-', 1) 
-) files 
-left join (
-select id, filetype, loc, row_number() over (partition by filetype order by filetype) location_id
-from (
-select id, dbo.Separator_Single(value, '-', 1) filetype, dbo.Separator_Single(value, '-', 2) loc
-from dbo.separator(@restore_loction_groups,';'))a
-where filetype != dbo.Separator_Single(@number_of_files_per_type, '-', 1)) loc
-on files.filetype = loc.filetype
-union all
-select LogicalName, PhysicalName, Type, loc.loc, files.fileid
-from (
-select *, row_number() over(partition by seq order by fileid) file_group_id
-from (
-select LogicalName, PhysicalName, Type, filegroup, fileid, a.filetype, 
-case when a.filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1) then 
-case seq_id % cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int) when 0 then cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int) 
-else seq_id % cast(dbo.Separator_Single(@number_of_files_per_type, '-', 2) as int)
-end else 0
-end seq 
-from (
-select LogicalName, PhysicalName, Type, filegroup, fileid, filetype, row_number() over(partition by filetype order by fileid) seq_id
-from @filelistonly
-where filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1) 
-)a)b) files inner join (
-select id, filetype, loc, row_number() over (partition by filetype order by filetype) location_id
-from (
-select id, dbo.Separator_Single(value, '-', 1) filetype, dbo.Separator_Single(value, '-', 2) loc
-from dbo.separator(@restore_loction_groups,';'))a
-where filetype = dbo.Separator_Single(@number_of_files_per_type, '-', 1)) loc
-on files.filetype = loc.filetype
-and files.file_group_id = loc.location_id)a)b
-order by fileid
-
-declare @fileid int, @location varchar(1500)
-declare g cursor fast_forward
-for
-select distinct fileid, location 
-from @filelistonly_groups
-
+	declare @fileid int, @location varchar(1500)
+	declare g cursor fast_forward
+	for
+	select distinct fileid, location 
+	from @filelistonly_groups
 end
 --print(@sql)
 
@@ -430,11 +418,10 @@ declare dbfiles_cursor cursor fast_forward
 for
 select 
 LogicalName, originalPath, 
-case when PhysicalName like '%.%' then 
-		substring(PhysicalName, 1, charindex('.',PhysicalName)-1) else PhysicalName end PhysicalName,
-case when PhysicalName like '%.%' then 
-		reverse(substring(reverse(PhysicalName), 1, charindex('.',reverse(PhysicalName)))) else 'no_ext' end ext,
-		type
+case when PhysicalName like '%.%' 
+     then substring(PhysicalName, 1, charindex('.',PhysicalName)-1) else PhysicalName end PhysicalName,
+case when PhysicalName like '%.%' 
+     then reverse(substring(reverse(PhysicalName), 1, charindex('.',reverse(PhysicalName)))) else 'no_ext' end ext, type
 from (
 select LogicalName, type,
 reverse(substring(reverse(PhysicalName), charindex('\',reverse(PhysicalName)),len(PhysicalName))) OriginalPath, 
@@ -544,8 +531,6 @@ begin
 	deallocate dbfiles_cursor_groups 
 end
 
-print(@file_move)
-
 open backupfiles_cursor 
 fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType
 while @@fetch_status = 0
@@ -555,12 +540,12 @@ if @password = 'default' and (@option_01 + @option_02 + @option_04) = 1
 begin
 set @sql = '
 RESTORE '+
-case when @BackupType in (1, 3) then 'DATABASE' when @BackupType in (2) then 'LOG' end+' '+
+case when @BackupType in (1,5) then 'DATABASE' when @BackupType in (2) then 'LOG' end+' '+
 case when @new_db_name = 'default' then '['+@DatabaseName+']' else '['+@new_db_name+']' end
 +'
 FROM DISK = N'+''''+@backupfile+''''+'
 WITH FILE = '+cast(@Position as varchar)+','+
-case when @BackupType ! = 2 then @file_move+',' else '' end+'
+case when @BackupType = 1 then @file_move+',' else '' end+'
 '+case 
 when @filenumber  = 'all' and @lastfile = @position then 
 case when @with_recovery = 1 then 'RECOVERY' else 'NORECOVERY' end
@@ -574,7 +559,7 @@ begin
 
 set @sql = '
 RESTORE '+
-case when @BackupType in (1,3) then 'DATABASE' when @BackupType = 2 then 'LOG' end+' '+
+case when @BackupType in (1,5) then 'DATABASE' when @BackupType in (2) then 'LOG' end+' '+
 case when @new_db_name = 'default' then '['+@DatabaseName+']' else '['+@new_db_name+']' end
 +'
 FROM DISK = N'+''''+@backupfile+''''+'
@@ -590,7 +575,7 @@ else 'NORECOVERY' end+', NOUNLOAD, STATS = '+cast(@percent as varchar)
 end
 
 print(@sql)
---exec(@sql)
+exec(@sql)
 
 fetch next from backupfiles_cursor into @Position, @DatabaseName, @BackupType
 end
