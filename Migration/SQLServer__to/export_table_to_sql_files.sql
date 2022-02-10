@@ -105,3 +105,91 @@ deallocate exp_cur
 set nocount off
 
 end
+GO
+
+CREATE Procedure sp_import_dump_files
+(@server_ip varchar(100), @db_name varchar(300), @files_location varchar(1000))
+as
+begin
+declare @xp_cmdshell varchar(1000)
+declare 
+@dump varchar(1000),
+@table_name varchar(500),
+@sql varchar(max), 
+@from_id bigint, 
+@id int
+
+declare @table table (output_text varchar(max))
+declare @export_files table (id int identity(1,1), table_name varchar(500), dump_file_name varchar(2000), from_id bigint, size float)
+
+set nocount on
+set @xp_cmdshell = 'xp_cmdshell ''dir cd '+@files_location+''''
+insert into @table
+exec (@xp_cmdshell)
+
+insert into @export_files
+select table_name, dump_file_name, cast(substring(from_id, 1, charindex('_',from_id)-1) as bigint) from_id, size
+from (
+select 
+output_text dump_file_name, 
+reverse(substring(reverse(output_text), charindex(reverse('_from_'),reverse(output_text))+6, len(reverse(output_text)))) table_name, 
+substring(output_text, charindex('_from_',output_text)+6, len(output_text)) from_id, 
+replace(rtrim(ltrim(substring(output_text_all, 1, charindex(' ',output_text_all)-1))),',','') size
+from (
+select substring(output_text, charindex(' ',output_text)+1, len(output_text)) output_text, output_text output_text_all
+from (
+select ltrim(rtrim(substring(output_text, charindex('M ', output_text)+1, len(output_text)))) output_text
+from @table
+where output_text like '%M %'
+and output_text not like '%<DIR>%')a)b)c
+order by from_id
+
+declare i cursor fast_forward
+for
+select ef.id, ef.table_name, ef.dump_file_name, ef.from_id
+from @export_files ef left outer join master.dbo.table_insert_log tio
+on ef.table_name = tio.table_name
+and ef.from_id = tio.from_id
+where size > 0
+order by id 
+
+open i
+fetch next from i into @id, @table_name, @dump, @from_id
+while @@FETCH_STATUS = 0
+begin
+	begin try
+		set @sql = 'xp_cmdshell ''sqlcmd -S '+@server_ip+' -E -d '+@db_name+' -i '+@files_location+'\'+@dump+''''
+		print(@sql)
+		exec(@sql)
+		insert into master.dbo.table_insert_log (from_id,table_name,dump_file_name,[status]) values (@from_id, @table_name, @dump, 1)
+	end try
+	begin catch
+		print(@files_location+'\'+@dump+' does not transfer.')
+		insert into master.dbo.table_insert_log (from_id,table_name,dump_file_name,[status]) values (@from_id, @table_name, @dump, 0)
+	end catch
+fetch next from i into @id, @table_name, @dump, @from_id
+end
+close i
+deallocate i
+set nocount off
+end
+GO
+
+exec [dbo].[sp_export_dump_files]
+@db_name = 'ProdDEV', 
+@dump_files_location = 'T:\Export',
+@table_name = 'sales.salesorderdetailes',
+@new_name = 'dbo.salesorderdetailes',
+@migrated_to = 'MS SQL SERVER',
+@columns = 'RECID,XMLRECORD',
+@bulk = 10000,
+@id_f = 1,
+@id_t = 100
+
+GO
+
+exec [dbo].[sp_import_dump_files]
+@server_ip = '10.10.5.65', 
+@db_name = 'PROD', 
+@files_location = 'T:\Export'
+
