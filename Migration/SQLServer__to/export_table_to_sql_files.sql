@@ -48,8 +48,9 @@ PRIMARY KEY CLUSTERED  ([id] ASC))
 
 set @dynamic_sql = '
 select '+case when @top = 'all' then '' else 'TOP ('+@top+')' end +' row_number() over(order by '+@unique_column+') id, '+@unique_column+'
-from '+@db_name+'.'+@table_name+'
-order by '+@unique_column
+from '+@db_name+'.'+@table_name+' WITH (NOLOCK)
+order by '+@unique_column+'
+OPTION (MAXDOP 4)'
 
 print (@dynamic_sql)
 insert into @table 
