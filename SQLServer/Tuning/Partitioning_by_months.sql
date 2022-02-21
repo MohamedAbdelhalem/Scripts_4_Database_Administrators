@@ -29,7 +29,7 @@ Set @sql= '
 Alter database ['+@db_name+'] add filegroup Month_'+@mon+'_'+@month+';
 Alter database ['+@db_name+'] add file (
 Name=''Month_'+@mon+''', 
-Filename=''C:\dataFiles\'+@file+'_'+@mon+'_'+@month+'.ndf'', 
+Filename=''C:\dataFiles\Month_'+@mon+'_'+@month+'.ndf'', 
 Size = 10mb, 
 Filegrowth= 128mb, 
 Maxsize=unlimited) 
@@ -84,7 +84,6 @@ CREATE TABLE [dbo].[SalesOrderHeader](
   ([Partition_ID], [SalesOrderID])) on ps_Months([Partition_ID]) -- make the Partition Id first 
 GO
 
-
 Insert into [dbo].[SalesOrderHeader](
 [SalesOrderID], [RevisionNumber], [OrderDate], [DueDate], [ShipDate], [Status], [OnlineOrderFlag], [SalesOrderNumber], 
 [PurchaseOrderNumber], [AccountNumber], [CustomerID], [SalesPersonID], [TerritoryID], [BillToAddressID], [ShipToAddressID], 
@@ -95,9 +94,20 @@ Select
 [ShipMethodID], [CreditCardID], [CreditCardApprovalCode], [CurrencyRateID], [SubTotal], [TaxAmt], [Freight], [TotalDue], [Comment]
 From [AdventureWorks2017].[Sales].[SalesOrderHeader]
 
-Select index_id, partition_number, rows 
-From sys.partitions
-Where object_id = object_id('dbo.salesorderheader')
+
+select '['+schema_name(schema_id)+'].['+t.name+']' table_name, 
+index_id, case when fg.name != 'PRIMARY' then partition_number - 1 else partition_number end partition_number, 
+master.dbo.format(rows,-1) rows, fg.name [filegroup_name]
+from sys.partitions p inner join sys.allocation_units a
+on (a.type in (1,3) and a.container_id = p.partition_id)
+or (a.type in (2) and a.container_id = p.hobt_id)
+inner join sys.filegroups fg 
+on a.data_space_id = fg.data_space_id
+inner join sys.tables t
+on p.object_id = t.object_id
+where p.object_id in (object_id('[dbo].[FactSales]'),object_id('[dbo].[FactSales2]'),object_id('[dbo].[FactSales3]'))
+and t.name = 'FactSales3'
+
 
 Select * from [SalesOrderHeader]
 Where SalesOrderID = 55464
