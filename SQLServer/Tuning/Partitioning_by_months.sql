@@ -80,8 +80,8 @@ CREATE TABLE [dbo].[SalesOrderHeader](
 	[TotalDue] [money] NOT NULL,
 	[Comment] [nvarchar](128) NULL,
  CONSTRAINT [PK_SalesOrderHeader_SalesOrderID] PRIMARY KEY CLUSTERED 
---([SalesOrderID], [Partition_ID])) on ps_Months([Partition_ID]) -- make the cluster key first 
-  ([Partition_ID], [SalesOrderID])) on ps_Months([Partition_ID]) -- make the Partition Id first 
+  ([SalesOrderID], [Partition_ID])) on ps_Months([Partition_ID]) -- Machen Sie den Cluster-Schlüssel in die erste position und das ist richtiger. 
+--([Partition_ID], [SalesOrderID])) on ps_Months([Partition_ID]) -- make the Partition Id first 
 GO
 
 Insert into [dbo].[SalesOrderHeader](
@@ -105,9 +105,6 @@ inner join sys.filegroups fg
 on a.data_space_id = fg.data_space_id
 inner join sys.tables t
 on p.object_id = t.object_id
-where p.object_id in (object_id('[dbo].[FactSales]'),object_id('[dbo].[FactSales2]'),object_id('[dbo].[FactSales3]'))
-and t.name = 'FactSales3'
+where p.object_id in (object_id('[dbo].[SalesOrderHeader]'))
 
 
-Select * from [SalesOrderHeader]
-Where SalesOrderID = 55464
