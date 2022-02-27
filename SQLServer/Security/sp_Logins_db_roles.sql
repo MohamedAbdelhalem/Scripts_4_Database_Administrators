@@ -1,5 +1,5 @@
 CREATE Procedure [master].[dbo].[sp_logins_db_roles] 
-(@group_by varchar(100))
+(@group_by varchar(100), @login_name varchar(100) = '*')
 as
 begin
 declare @users table (
@@ -76,7 +76,16 @@ order by login_name
 end
 else if (@group_by = 'none')
 begin
-select database_name, login_name, login_type, default_schema_name, authentication_type_desc, db_role_name
-from @users
+	if @login_name = '*'
+	begin
+		select database_name, login_name, login_type, default_schema_name, authentication_type_desc, db_role_name
+		from @users
+	end
+	else
+	begin
+		select database_name, login_name, login_type, default_schema_name, authentication_type_desc, db_role_name
+		from @users
+		where login_name = @login_name
+	end
 end
 end
