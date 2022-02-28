@@ -61,7 +61,7 @@ begin
 	+ case when (@number +1) % 12 = 0 then char(13) else '' end
 	set @number = @number + 1
 end
-select @sql = 'CREATE PARTITION SCHEME ps_datetime_daily AS PARTITION [pf_datetime_daily] TO ([PRIMARY],
+select @sql = 'CREATE PARTITION SCHEME [ps_datetime_daily] AS PARTITION [pf_datetime_daily] TO ([PRIMARY],
 '+@sql+')'
 
 --select @sql
