@@ -33,6 +33,8 @@ to filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';'
 
 --select @sql
 exec(@sql)
+
+
 set @loop = @loop + 1
 end
 
