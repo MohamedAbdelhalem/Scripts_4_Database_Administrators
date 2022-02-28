@@ -2,17 +2,24 @@
 
 declare @year_f int = 2005, @year_t int = 2025
 declare @db_name varchar(300) = 'Data_Hub_Cortex', @filegroup_name varchar(100) = 'DH_Cortex'
+declare @files_location varchar(300) = 'C:\dataFiles'
 declare @loop int = @year_f, @sql varchar(max)
 declare @datestart datetime, @dateend datetime, @x int = 0
 select @datestart = convert(datetime,cast(@year_f as varchar)+'-01-01',121)
 select @dateend = convert(datetime,convert(varchar(10),dateadd(s,-1,convert(datetime,cast(@year_t+1 as varchar)+'-01-01',121)),121),121)
 
+if right(@files_location,1) != '\' 
+begin
+set @files_location = @files_location+'\'
+end
+
 while @loop between @year_f and @year_t
 begin 
 set @sql= '
 alter database ['+@db_name+'] add filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';
-alter database ['+@db_name+'] add file (name='''+@filegroup_name+'_'+cast(@loop as varchar(10))+''', filename=''C:\dataFiles\'+@filegroup_name+'_'+cast(@loop as varchar(10))+'.ndf'', size = 10mb, filegrowth= 128mb, maxsize=unlimited) 
+alter database ['+@db_name+'] add file (name='''+@filegroup_name+'_'+cast(@loop as varchar(10))+''', filename='''+@files_location+@filegroup_name+'_'+cast(@loop as varchar(10))+'.ndf'', size = 10mb, filegrowth= 128mb, maxsize=unlimited) 
 to filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';'
+
 --select @sql
 exec(@sql)
 set @loop = @loop + 1
