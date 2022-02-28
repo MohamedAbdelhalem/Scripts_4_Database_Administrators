@@ -1,9 +1,9 @@
 --This script allow you to have a physical file for each YEAR and for each day a single partition
 
 declare 
-@year_f 	int = 2005, 
-@year_t 	int = 2025,
-@db_name 	varchar(300) = 'Data_Hub_Cortex', 
+@year_f 	int = 2015, 
+@year_t 	int = 2020,
+@db_name 	varchar(300) = 'Albilad', 
 @filegroup_name varchar(100) = 'DH_Cortex',
 @files_location varchar(300) = 'C:\dataFiles'
 
@@ -36,7 +36,7 @@ exec(@sql)
 set @loop = @loop + 1
 end
 
-set @sql = ''
+set @sql = null
 set @number = 0
 while dateadd(day,@number,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
 begin
@@ -44,14 +44,14 @@ begin
 	+ case when (@number +1) % 8 = 0 then char(13) else '' end
 	set @number = @number + 1
 end
-select @sql = 'CREATE PARTITION FUNCTION pf_datetime_daily(datetime) AS RANGE RIGHT FOR VALUES (
+select @sql = 'CREATE PARTITION FUNCTION [pf_datetime_daily] (datetime) AS RANGE RIGHT FOR VALUES (
 '+@sql+')'
 
 --select @sql
 --print(@sql)
 exec(@sql)
 
-set @sql = ''
+set @sql = null
 set @number = 0
 while dateadd(day,@number,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
 begin
@@ -59,7 +59,7 @@ begin
 	+ case when (@number +1) % 12 = 0 then char(13) else '' end
 	set @number = @number + 1
 end
-select @sql = 'CREATE PARTITION SCHEME ps_datetime_daily TO ([PRIMARY],
+select @sql = 'CREATE PARTITION SCHEME ps_datetime_daily AS PARTITION [pf_datetime_daily] TO ([PRIMARY],
 '+@sql+')'
 
 --select @sql
