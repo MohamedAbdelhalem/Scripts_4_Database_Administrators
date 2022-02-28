@@ -86,9 +86,12 @@ CREATE TABLE [dbo].[FactSales_by_year_days](
 ([DateId],[ArticleId],[BranchId],[OrderId],[ADate])) on ps_datetime_daily([ADate]) 
 GO
 
-SELECT '['+schema_name(schema_id)+'].['+t.name+']' table_name, 
+select '['+schema_name(schema_id)+'].['+t.name+']' table_name, 
 index_id, case when fg.name != 'PRIMARY' then partition_number - 1 else partition_number end partition_number, 
-master.dbo.format(rows,-1) rows, fg.name [filegroup_name]
+master.dbo.format(rows,-1) rows, fg.name [filegroup_name], 
+dateadd(day, 
+row_number() over(partition by fg.name order by partition_number) - 1, 
+reverse(substring(reverse(fg.name), 1, charindex('_',reverse(fg.name))-1))+'-01-01') partition_function_Range
 from sys.partitions p inner join sys.allocation_units a
 on (a.type in (1,3) and a.container_id = p.partition_id)
 or (a.type in (2) and a.container_id = p.hobt_id)
@@ -97,4 +100,6 @@ on a.data_space_id = fg.data_space_id
 inner join sys.tables t
 on p.object_id = t.object_id
 where p.object_id in (object_id('[dbo].[FactSales_by_year_days]'))
+and fg.name != 'PRIMARY'
+order by partition_number
 
