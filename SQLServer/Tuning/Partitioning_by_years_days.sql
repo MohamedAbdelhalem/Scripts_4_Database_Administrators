@@ -4,9 +4,12 @@ declare @year_f int = 2005, @year_t int = 2025
 declare @db_name varchar(300) = 'Data_Hub_Cortex', @filegroup_name varchar(100) = 'DH_Cortex'
 declare @files_location varchar(300) = 'C:\dataFiles'
 declare @loop int = @year_f, @sql varchar(max)
-declare @datestart datetime, @dateend datetime, @x int = 0
+declare @datestart datetime, @dateend datetime, @number int = 0
+
 select @datestart = convert(datetime,cast(@year_f as varchar)+'-01-01',121)
 select @dateend = convert(datetime,convert(varchar(10),dateadd(s,-1,convert(datetime,cast(@year_t+1 as varchar)+'-01-01',121)),121),121)
+
+set nocount on
 
 if right(@files_location,1) != '\' 
 begin
@@ -26,11 +29,12 @@ set @loop = @loop + 1
 end
 
 set @sql = ''
-set @x = 0
-while dateadd(day,@x,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
+set @number = 0
+while dateadd(day,@number,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
 begin
-	set @sql = isnull(@sql+',',' ')+'N'+''''+convert(varchar(30),dateadd(day,@x, @datestart),121)+'''' + case when (@x +1) % 8 = 0 then char(13) else '' end
-	set @x = @x + 1
+	set @sql = isnull(@sql+',',' ')+'N'+''''+convert(varchar(30),dateadd(day,@number, @datestart),121)+'''' 
+	+ case when (@number +1) % 8 = 0 then char(13) else '' end
+	set @number = @number + 1
 end
 select @sql = 'CREATE PARTITION FUNCTION pf_datetime_daily(datetime) AS RANGE RIGHT FOR VALUES (
 '+@sql+')'
@@ -40,12 +44,12 @@ select @sql = 'CREATE PARTITION FUNCTION pf_datetime_daily(datetime) AS RANGE RI
 exec(@sql)
 
 set @sql = ''
-set @x = 0
-while dateadd(day,@x,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
+set @number = 0
+while dateadd(day,@number,convert(datetime,cast(@year_f as varchar)+'-01-01',121)) between @datestart and @dateend
 begin
-	set @sql = isnull(@sql+',',' ')+'['+@filegroup_name+'_'+cast(year(convert(varchar(30),dateadd(day,@x, @datestart),121)) as varchar)+']'
-	+ case when (@x +1) % 12 = 0 then char(13) else '' end
-	set @x = @x + 1
+	set @sql = isnull(@sql+',',' ')+'['+@filegroup_name+'_'+cast(year(convert(varchar(30),dateadd(day,@number, @datestart),121)) as varchar)+']'
+	+ case when (@number +1) % 12 = 0 then char(13) else '' end
+	set @number = @number + 1
 end
 select @sql = 'CREATE PARTITION SCHEME ps_datetime_daily TO ([PRIMARY],
 '+@sql+')'
@@ -54,3 +58,4 @@ select @sql = 'CREATE PARTITION SCHEME ps_datetime_daily TO ([PRIMARY],
 --print(@sql)
 exec(@sql)
 
+set nocount off
