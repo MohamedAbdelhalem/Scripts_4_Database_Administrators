@@ -33,8 +33,6 @@ to filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';'
 
 --select @sql
 exec(@sql)
-
-
 set @loop = @loop + 1
 end
 
@@ -69,3 +67,34 @@ select @sql = 'CREATE PARTITION SCHEME [ps_datetime_daily] AS PARTITION [pf_date
 exec(@sql)
 
 set nocount off
+
+
+GO
+CREATE TABLE [dbo].[FactSales_by_year_days](
+	[DateId] [int] NOT NULL,
+	[ArticleId] [int] NOT NULL,
+	[BranchId] [int] NOT NULL,
+	[OrderId] [int] NOT NULL,
+	[Quantity] [decimal](9, 3) NOT NULL,
+	[UnitPrice] [money] NOT NULL,
+	[Amount] [money] NOT NULL,
+	[DiscountPcnt] [decimal](6, 3) NOT NULL,
+	[DiscountAmt] [money] NOT NULL,
+	[TaxAmt] [money] NOT NULL,
+	[ADate] [datetime] NOT NULL,
+ CONSTRAINT [PK_FactSales_pbyd] PRIMARY KEY CLUSTERED 
+([DateId],[ArticleId],[BranchId],[OrderId],[ADate])) on ps_datetime_daily([ADate]) 
+GO
+
+SELECT '['+schema_name(schema_id)+'].['+t.name+']' table_name, 
+index_id, case when fg.name != 'PRIMARY' then partition_number - 1 else partition_number end partition_number, 
+master.dbo.format(rows,-1) rows, fg.name [filegroup_name]
+from sys.partitions p inner join sys.allocation_units a
+on (a.type in (1,3) and a.container_id = p.partition_id)
+or (a.type in (2) and a.container_id = p.hobt_id)
+inner join sys.filegroups fg 
+on a.data_space_id = fg.data_space_id
+inner join sys.tables t
+on p.object_id = t.object_id
+where p.object_id in (object_id('[dbo].[FactSales_by_year_days]'))
+
