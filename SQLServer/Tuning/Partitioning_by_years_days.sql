@@ -1,10 +1,18 @@
 --This script allow you to have a physical file for each YEAR and for each day a single partition
 
-declare @year_f int = 2005, @year_t int = 2025
-declare @db_name varchar(300) = 'Data_Hub_Cortex', @filegroup_name varchar(100) = 'DH_Cortex'
-declare @files_location varchar(300) = 'C:\dataFiles'
-declare @loop int = @year_f, @sql varchar(max)
-declare @datestart datetime, @dateend datetime, @number int = 0
+declare 
+@year_f 	int = 2005, 
+@year_t 	int = 2025,
+@db_name 	varchar(300) = 'Data_Hub_Cortex', 
+@filegroup_name varchar(100) = 'DH_Cortex',
+@files_location varchar(300) = 'C:\dataFiles'
+
+declare 
+@loop 		int = @year_f, 
+@sql 		varchar(max),
+@datestart 	datetime, 
+@dateend 	datetime, 
+@number 	int = 0
 
 select @datestart = convert(datetime,cast(@year_f as varchar)+'-01-01',121)
 select @dateend = convert(datetime,convert(varchar(10),dateadd(s,-1,convert(datetime,cast(@year_t+1 as varchar)+'-01-01',121)),121),121)
