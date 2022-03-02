@@ -1,11 +1,11 @@
 --This script allow you to have a physical file for each YEAR and for each day a single partition
 
 declare 
-@year_f 	int = 2015, 
-@year_t 	int = 2020,
-@db_name 	varchar(300) = 'Albilad', 
+@year_f 	int = 2005, 
+@year_t 	int = 2025,
+@db_name 	varchar(300) = 'Data_Hub_Cortex_Years', 
 @filegroup_name varchar(100) = 'DH_Cortex',
-@files_location varchar(300) = 'C:\dataFiles'
+@files_location varchar(300) = 'E:\Data_Hub_Cortex_Years\Partition_DB_Files'
 
 declare 
 @loop 		int = @year_f, 
@@ -27,9 +27,10 @@ end
 while @loop between @year_f and @year_t
 begin 
 set @sql= '
-alter database ['+@db_name+'] add filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';
-alter database ['+@db_name+'] add file (name='''+@filegroup_name+'_'+cast(@loop as varchar(10))+''', filename='''+@files_location+@filegroup_name+'_'+cast(@loop as varchar(10))+'.ndf'', size = 10mb, filegrowth= 128mb, maxsize=unlimited) 
-to filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';'
+Use ['+@db_name+']
+Alter Database ['+@db_name+'] Add Filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';
+Alter Database ['+@db_name+'] Add File (name='''+@filegroup_name+'_'+cast(@loop as varchar(10))+''', filename='''+@files_location+@filegroup_name+'_'+cast(@loop as varchar(10))+'.ndf'', size = 10mb, filegrowth= 128mb, maxsize=unlimited) 
+To Filegroup '+@filegroup_name+'_'+cast(@loop as varchar(10))+';'
 
 --select @sql
 exec(@sql)
@@ -44,7 +45,9 @@ begin
 	+ case when (@number +1) % 8 = 0 then char(13) else '' end
 	set @number = @number + 1
 end
-select @sql = 'CREATE PARTITION FUNCTION [pf_datetime_daily] (datetime) AS RANGE RIGHT FOR VALUES (
+select @sql = '
+Use ['+@db_name+']
+CREATE PARTITION FUNCTION [pf_datetime_daily] (datetime) AS RANGE RIGHT FOR VALUES (
 '+@sql+')'
 
 --select @sql
@@ -59,7 +62,9 @@ begin
 	+ case when (@number +1) % 12 = 0 then char(13) else '' end
 	set @number = @number + 1
 end
-select @sql = 'CREATE PARTITION SCHEME [ps_datetime_daily] AS PARTITION [pf_datetime_daily] TO ([PRIMARY],
+select @sql = '
+Use ['+@db_name+']
+CREATE PARTITION SCHEME [ps_datetime_daily] AS PARTITION [pf_datetime_daily] TO ([PRIMARY],
 '+@sql+')'
 
 --select @sql
