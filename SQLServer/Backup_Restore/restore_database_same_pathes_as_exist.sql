@@ -7,7 +7,7 @@ LogicalName varchar(1000), PhysicalName varchar(1000), Type varchar(1000), FileG
 declare 
 @restore varchar(max),
 @sql varchar(max), 
-@filename varchar(1000) = '\\npci2.d2fs.albilad.com\DBTEMP\Temp Weekly Backup\D2T24DBSQIWV4\T24PROD_UAT\FULL\T24PROD_PT_Full_2022_04_14__04_12_pm.bak' 
+@filename varchar(1000) = '\\10.0.0.1\PROD_PT_Full_2022_04_14__04_12_pm.bak' 
 
 set nocount on
 set @sql = 'RESTORE filelistonly 
@@ -21,8 +21,7 @@ if @database_name = 'default'
 begin
 	select @database_name = destination_database_name
 	from msdb.dbo.restorehistory
-	where backup_set_id in (Select max(backup_set_id) 
-							from msdb.dbo.restorehistory)
+	where backup_set_id in (Select max(backup_set_id) from msdb.dbo.restorehistory)
 end
 
 set @restore = 'RESTORE DATABASE ['+@database_name+'] 
@@ -52,8 +51,7 @@ from msdb.dbo.restorehistory rh inner join msdb.dbo.backupfile bf
 on rh.backup_set_id = bf.backup_set_id
 inner join @table t
 on bf.file_number = t.FileId
-where bf.backup_set_id in (Select max(backup_set_id) 
-							from msdb.dbo.restorehistory)
+where bf.backup_set_id in (Select max(backup_set_id) from msdb.dbo.restorehistory)
 and destination_database_name = @database_name
 
 select fileid, LogicalName, PhysicalName backup_physical_name, Physical_Name original_physical_name, FileGroupName, IsReadOnly
@@ -61,8 +59,7 @@ from msdb.dbo.restorehistory rh inner join msdb.dbo.backupfile bf
 on rh.backup_set_id = bf.backup_set_id
 inner join @table t
 on bf.file_number = t.FileId
-where bf.backup_set_id in (Select max(backup_set_id) 
-							from msdb.dbo.restorehistory)
+where bf.backup_set_id in (Select max(backup_set_id) from msdb.dbo.restorehistory)
 and destination_database_name = @database_name
 
 set  @restore = @restore+'NOUNLOAD, STATS = 1'
