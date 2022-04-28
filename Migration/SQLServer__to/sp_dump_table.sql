@@ -50,14 +50,18 @@ exec [dbo].[sp_dump_table]
 @table = '[Sales].[SalesOrderDetail]', 
 @new_name = '[dbo].[SalesOrderDetail]', 
 @migrated_to = 'MS SQL Server', 
-@columns = ''
+--(
+@columns = 'SalesOrderID, SalesOrderDetailID, CarrierTrackingNumber, OrderQty, ProductID, UnitPrice, UnitPriceDiscount, LineTotal'
 --or
 @columns = 'all',
+--)
+--(
 @where_records_condition = 'where productid = 772 
 and OrderQty > 5
 order by OrderQty desc',
 --or
 @where_records_condition = 'default',
+--)
 @with_computed = 0, 
 @header = 0, 
 @bulk = 1000, 
