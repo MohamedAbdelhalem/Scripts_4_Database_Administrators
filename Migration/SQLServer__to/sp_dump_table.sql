@@ -17,6 +17,7 @@
 --v2.5 added where condition parameter to select a specific rows
 --v2.5 adding patches for big tables with xml
 --v2.5 adding feature to exclude columns from the insert statement (dump table)
+--v3.1 fixing columns selection
 
 declare @bulk int = 100000
 declare @table table (id int primary key, recid varchar(255))
@@ -49,22 +50,27 @@ exec [dbo].[sp_dump_table]
 @table = '[Sales].[SalesOrderDetail]', 
 @new_name = '[dbo].[SalesOrderDetail]', 
 @migrated_to = 'MS SQL Server', 
+@columns = ''
+--or
+@columns = 'all',
 @where_records_condition = 'where productid = 772 
 and OrderQty > 5
 order by OrderQty desc',
+--or
+@where_records_condition = 'default',
 @with_computed = 0, 
 @header = 0, 
 @bulk = 1000, 
 @patch = 0
 
 GO
-CREATE OR ALTER Procedure [dbo].[sp_dump_table]
+CREATE Procedure [dbo].[sp_dump_table]
 (
 @table varchar(350), 
 @new_name varchar(350) = 'default', 
 @migrated_to varchar(300) = 'MS SQL Server', 
-@where_records_condition varchar(300) = 'default',
 @columns varchar(3000) = 'all',
+@where_records_condition varchar(300) = 'default',
 @with_computed int = 0, 
 @header bit = 1, 
 @bulk int = 1000, 
@@ -110,6 +116,17 @@ set @v$column_desc = ''
 set @V$insert_columns = ''
 set @V$variables_cursor = ''
 declare @table_structure table (id int identity(1,1), table_syntax nvarchar(500))
+declare @columns_table table (column_name varchar(400))
+if @columns = 'All'
+begin
+insert into @columns_table 
+select name from sys.columns where object_id = @object_id order by column_id
+end
+else
+begin
+insert into @columns_table 
+select ltrim(rtrim(value)) from dbo.Separator(@columns,',') 
+end
 
 if @migrated_to = 'MS SQL Server' and @object_id is not null
 begin
@@ -370,7 +387,7 @@ begin
 				end DATA_TYPE
 		from INFORMATION_SCHEMA.columns c
 		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
-		and column_name in (select ltrim(rtrim(value)) from dbo.Separator(@columns,','))
+		and column_name in (select column_name from @columns_table)
 		order by ordinal_position
 	end
 	else if @migrated_to = 'PostgreSQL'
@@ -425,6 +442,7 @@ begin
 				end DATA_TYPE
 		from INFORMATION_SCHEMA.columns c
 		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
+		and column_name in (select column_name from @columns_table)
 		order by ordinal_position
 	end
 
