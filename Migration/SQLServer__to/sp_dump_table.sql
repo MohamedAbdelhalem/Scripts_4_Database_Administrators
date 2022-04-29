@@ -47,7 +47,7 @@ CREATE Procedure [dbo].[sp_dump_table]
 (
 @table varchar(350), 
 @new_name varchar(350) = 'default', 
-@migrated_to varchar(300) = 'MS SQL Server', 
+@migrated_to varchar(300) = 'MS SQL Server', --or PostgreSQL
 @columns varchar(3000) = 'all',
 @where_records_condition varchar(300) = 'default',
 @with_computed int = 0, 
