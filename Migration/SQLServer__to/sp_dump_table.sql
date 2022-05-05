@@ -490,7 +490,10 @@ begin
 				else 
 					replace(replace(@new_name,']',''),'[','') 
 			end
-		end+' ('+@V$insert_columns+') 
+		end+' ('+case @migrated_to when 'MS SQL Server' 
+		then @V$insert_columns
+		else	replace(replace(@V$insert_columns,']',''),'[','')
+		end+') 
 		values ('''+@V$values+');''
 	fetch next from CURSOR_COLUMN into '+@V$variables_cursor+'
 	end
