@@ -1,13 +1,9 @@
 USE [master]
 GO
-declare @sql varchar(max)
+declare @sql varchar(max), @drop varchar(500), @replace bit = 0
 
-if (select count(*) from sys.objects where object_id = object_id('numberSize') and schema_id = 1) > 0
-begin
-print('Scaler-valued Function [dbo].[numberSize] already exists')
-end
-else
-begin
+-----------------------------------------------------------------------------------------------------------
+
 set @sql = 'CREATE Function [dbo].[numberSize]
 (@number numeric(20,2), @type varchar(1))
 returns varchar(100)
@@ -64,16 +60,27 @@ end
 
 return @return
 end'
-exec(@sql)
-print('Function [dbo].[numberSize] has created successfully')
-end
-
-if (select count(*) from sys.objects where object_id = object_id('Format') and schema_id = 1) > 0
+if (select count(*) from sys.objects where object_id = object_id('numberSize') and schema_id = 1) > 0 and @replace = 0
 begin
-print('Scaler-valued Function [dbo].[Format] already exists')
+	print('Scalar-valued Function [dbo].[numberSize] already exists')
+end
+else 
+if (select count(*) from sys.objects where object_id = object_id('numberSize') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[numberSize]'
+	exec(@drop)
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[numberSize] has created successfully')
 end
 else
+if (select count(*) from sys.objects where object_id = object_id('numberSize') and schema_id = 1) = 0 and @replace = 0
 begin
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[numberSize] has created successfully')
+end
+
+-----------------------------------------------------------------------------------------------------------
+
 set @sql = 'CREATE Function [dbo].[Format]
 (@P_Number decimal(35,6), @P_Round int)
 returns varchar(50)
@@ -159,17 +166,28 @@ end
 
 return @result 
 end'
-exec(@sql)
-print('Function [dbo].[Format] has created successfully')
-end
-
-if (select count(*) from sys.objects where object_id = object_id('Separator') and schema_id = 1) > 0
+if (select count(*) from sys.objects where object_id = object_id('Format') and schema_id = 1) > 0 and @replace = 0
 begin
-print('Table-valued Function [dbo].[Separator] already exists')
+	print('Scalar-valued Function [dbo].[Format] already exists')
+end
+else 
+if (select count(*) from sys.objects where object_id = object_id('Format') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[Format]'
+	exec(@drop)
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[Format] has created successfully')
 end
 else
+if (select count(*) from sys.objects where object_id = object_id('Format') and schema_id = 1) = 0 and @replace = 0
 begin
-set @sql = 'CREATE Function [dbo].[Separator]
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[Format] has created successfully')
+end
+
+-----------------------------------------------------------------------------------------------------------
+
+set	@sql = 'CREATE Function [dbo].[Separator]
 (@str NVARCHAR(MAX),@sepr NVARCHAR(5))
 RETURNS @table TABLE (ID INT IDENTITY(1,1), [Value] NVARCHAR(150))
 AS
@@ -186,9 +204,9 @@ SET @f_ind = 1
 WHILE @f_ind > 0
 BEGIN
 SET @f_ind = CASE WHEN CHARINDEX(@sepr,@str)-1 < 0 THEN 0 ELSE CHARINDEX(@sepr,@str)-1 END
-SET @s_ind = CHARINDEX(@sepr,@str)+1
+SET @s_ind = CHARINDEX(@sepr,@str)+ 1 + len(@sepr)
 SET @len   = LEN(@str)
-SET @word  = CASE WHEN SUBSTRING(@str , 1, @f_ind) = '' THEN @str ELSE SUBSTRING(@str , 1, @f_ind) END
+SET @word  = CASE WHEN SUBSTRING(@str , 1, @f_ind) = '''' THEN @str ELSE SUBSTRING(@str , 1, @f_ind) END
 SET @str   = SUBSTRING(@str , @s_ind,@len )
 
 INSERT INTO @table 
@@ -197,16 +215,28 @@ END
 
 RETURN
 END'
-exec(@sql)
-print('Function [dbo].[Separator] has created successfully')
-end
 
-if (select count(*) from sys.objects where object_id = object_id('virtical_array') and schema_id = 1) > 0
+if (select count(*) from sys.objects where object_id = object_id('Separator') and schema_id = 1) > 0 and @replace = 0
 begin
-print('Scaler-valued Function [dbo].[virtical_array] already exists')
+	print('Table-valued Function [dbo].[Separator] already exists')
+end
+else 
+if (select count(*) from sys.objects where object_id = object_id('Separator') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[Separator]'
+	exec(@drop)
+	exec(@sql)
+	print('Table-valued Function [dbo].[Separator] has created successfully')
 end
 else
+if (select count(*) from sys.objects where object_id = object_id('Separator') and schema_id = 1) = 0 and @replace = 0
 begin
+	exec(@sql)
+	print('Table-valued Function [dbo].[Separator] has created successfully')
+end
+
+-----------------------------------------------------------------------------------------------------------
+
 set @sql = 'CREATE Function [dbo].[virtical_array]
 (@string varchar(max), @sep varchar(5), @position int)
 returns varchar(max)
@@ -224,30 +254,132 @@ end
 
 return @result
 end'
-exec(@sql)
-print('Function [dbo].[virtical_array] has created successfully')
-end
-
-if (select count(*) from sys.objects where object_id = object_id('duration') and schema_id = 1) > 0
+if (select count(*) from sys.objects where object_id = object_id('virtical_array') and schema_id = 1) > 0 and @replace = 0
 begin
-print('Scaler-valued Function [dbo].[duration] already exists')
+	print('Scalar-valued Function [dbo].[virtical_array] already exists')
+end
+else 
+if (select count(*) from sys.objects where object_id = object_id('virtical_array') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[virtical_array]'
+	exec(@drop)
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[virtical_array] has created successfully')
 end
 else
+if (select count(*) from sys.objects where object_id = object_id('virtical_array') and schema_id = 1) = 0 and @replace = 0
 begin
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[virtical_array] has created successfully')
+end
+
+-----------------------------------------------------------------------------------------------------------
+
 set @sql = 'CREATE Function [dbo].[duration]
-(@seconds bigint)
+(@type varchar(5) = ''s'', @number bigint)
 returns varchar(50)
 as
 begin
 declare @duration varchar(50)
+if @type = ''ms''
+begin
 select @duration = 
-cast(day(convert(varchar(30), dateadd(s, @seconds, ''2000-01-01''), 121)) - 1 as varchar)+''d ''+
-[dbo].virtical_array(convert(varchar(10), dateadd(s, @seconds, ''2000-01-01''), 108),'':'',1)+''h:''+
-[dbo].virtical_array(convert(varchar(10), dateadd(s, @seconds, ''2000-01-01''), 108),'':'',2)+''m:''+
-[dbo].virtical_array(convert(varchar(10), dateadd(s, @seconds, ''2000-01-01''), 108),'':'',3)+''s'' 
+cast(day(convert(varchar(30), dateadd(ms, @number, ''2000-01-01''), 121)) - 1 as varchar)+''d ''+
+[dbo].virtical_array(convert(varchar(10), dateadd(ms, @number, ''2000-01-01''), 108),'':'',1)+''h:''+
+[dbo].virtical_array(convert(varchar(10), dateadd(ms, @number, ''2000-01-01''), 108),'':'',2)+''m:''+
+[dbo].virtical_array(convert(varchar(10), dateadd(ms, @number, ''2000-01-01''), 108),'':'',3)+''s.''+ 
+[dbo].virtical_array(convert(varchar(50), dateadd(ms, @number, ''2000-01-01''), 121),''.'',5)+''ms''
+end
+else if @type = ''s''
+begin
+select @duration = 
+cast(day(convert(varchar(30), dateadd(s, @number, ''2000-01-01''), 121)) - 1 as varchar)+''d ''+
+[dbo].virtical_array(convert(varchar(10), dateadd(s, @number, ''2000-01-01''), 108),'':'',1)+''h:''+
+[dbo].virtical_array(convert(varchar(10), dateadd(s, @number, ''2000-01-01''), 108),'':'',2)+''m:''+
+[dbo].virtical_array(convert(varchar(10), dateadd(s, @number, ''2000-01-01''), 108),'':'',3)+''s''
+end
 
 return @duration
 end'
-exec(@sql)
-print('Function [dbo].[duration] has created successfully')
+if (select count(*) from sys.objects where object_id = object_id('duration') and schema_id = 1) > 0 and @replace = 0
+begin
+	print('Scalar-valued Function [dbo].[duration] already exists')
 end
+else 
+if (select count(*) from sys.objects where object_id = object_id('duration') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[duration]'
+	exec(@drop)
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[duration] has created successfully')
+end
+else
+if (select count(*) from sys.objects where object_id = object_id('duration') and schema_id = 1) = 0 and @replace = 0
+begin
+	exec(@sql)
+	print('Scalar-valued Function [dbo].[duration] has created successfully')
+end
+
+-----------------------------------------------------------------------------------------------------------
+
+set @sql = 'CREATE Function [dbo].[fn_oneline]
+(
+@text				varchar(max), 
+@separator			varchar(10), 
+@one_line			bit,
+@with_square		int,
+@with_brackets		int,
+@with_text_before	int,
+@text_before		varchar(max)
+)
+returns @table table ([value] varchar(max))
+as
+begin
+
+declare @result varchar(max)
+select @result = isnull(@result+@separator,'''') + case 
+when @with_square + @with_brackets + @with_text_before = 1 then ''['' + value + '']'' 
+when @with_square + @with_brackets + @with_text_before = 2 then ''('' + value + '')'' 
+when @with_square + @with_brackets + @with_text_before = 4 then @text_before + value  
+when @with_square + @with_brackets + @with_text_before = 5 then @text_before + ''['' + value + '']''
+when @with_square + @with_brackets + @with_text_before = 6 then @text_before + ''('' + value + '')''
+else value end
+from master.dbo.Separator(@text,(select CHAR(10)))
+order by id
+
+set @result = replace(replace(replace(convert(varbinary(max), @result),0x0D,0x20),'' ]'','']''),'' )'','')'')
+
+if @one_line = 1
+begin
+insert into @table select @result
+end
+else
+begin
+insert into @table
+select ltrim(rtrim(value))
+from master.dbo.Separator(@result,@separator)
+order by id
+end
+
+return
+
+end'
+if (select count(*) from sys.objects where object_id = object_id('fn_oneline') and schema_id = 1) > 0 and @replace = 0
+begin
+	print('Table-valued Function [dbo].[fn_oneline] already exists')
+end
+else 
+if (select count(*) from sys.objects where object_id = object_id('fn_oneline') and schema_id = 1) > 0 and @replace = 1
+begin
+	set @drop = 'DROP Function [dbo].[fn_oneline]'
+	exec(@drop)
+	exec(@sql)
+	print('Table-valued Function [dbo].[fn_oneline] has created successfully')
+end
+else
+if (select count(*) from sys.objects where object_id = object_id('fn_oneline') and schema_id = 1) = 0 and @replace = 0
+begin
+	exec(@sql)
+	print('Table-valued Function [dbo].[fn_oneline] has created successfully')
+end
+
