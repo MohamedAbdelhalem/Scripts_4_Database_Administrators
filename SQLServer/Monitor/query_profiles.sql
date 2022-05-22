@@ -44,7 +44,6 @@ CAST((sum(write_page_count)			* 100. / (sum(sum(write_page_count))		OVER() + .00
 from sys.dm_exec_query_profiles p
 inner join sys.dm_exec_requests r
 on p.session_id = r.session_id
-cross apply sys.dm_exec_sql_text(r.sql_handle)s
 left join sys.objects o
 on o.object_id = p.object_id
 left join sys.indexes i
