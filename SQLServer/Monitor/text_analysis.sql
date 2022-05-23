@@ -1,10 +1,13 @@
-CREATE Function [dbo].[text_analysis] (@sql_text varchar(max))
-returns @table table (syntax varchar(1500), command varchar(100), sub_command varchar(100), table_name varchar(350), column_name varchar(350), fn_name varchar(350), index_name varchar(350))
+USE [master]
+GO
+
+create function [dbo].[text_analysis] (@sql_text varchar(max))
+returns @table table (syntax varchar(max), snap_action varchar(200), command varchar(100), sub_command varchar(100), table_name varchar(350), column_name varchar(350), fn_name varchar(350), index_name varchar(350))
 as
 begin
 
 insert into @table 
-select syntax, command, sub_command, table_name, column_name,fn_name,index_name
+select syntax, substring(syntax, 1, 100), command, sub_command, table_name, column_name,fn_name,index_name
 from (
 select syntax, command, sub_command, 
 case 
