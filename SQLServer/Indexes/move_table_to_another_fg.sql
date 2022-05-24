@@ -1,4 +1,4 @@
-CREATE Procedure [dbo].[move_to_another_filegroup]
+CREATE Procedure [dbo].[move_table_to_another_filegroup]
 (@table_name_with_schema varchar(500), @new_filegroup varchar(100))
 as
 begin
