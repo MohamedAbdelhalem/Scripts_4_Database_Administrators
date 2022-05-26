@@ -25,7 +25,7 @@
 --Parameters description
 --@table = the source table
 --@new_name = {"default = @table" or "put the destination table name"}
---@migrated_to = {"MS SQL Server = MSSQL to MSSQL" or "PostgreSQL = MSSQL to PostgreSQL"}
+--@migrated_to = {"MS SQL Server = MSSQL to MSSQL" or "PostgreSQL = MSSQL to PostgreSQL"} in the future i will add the other database platforms
 --@columns = {"default = all columns" or "put the columns that you want to extract them with comma separator"}
 --@where_records_condition = {"default = all rows" or "put the where condition to filter out your rows and put double quots for the single one"}
 --@with_computed = {"0 = without the compute column condition and it will fill with the equivlant datatype with the max length" 
