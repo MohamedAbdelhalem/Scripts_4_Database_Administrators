@@ -11,7 +11,7 @@
 --     added computed columns and customized data types
 --     fixed multi-column for primary key 
 --v2.3 added postgresql table conversion and data insertion
---v2.3 add new table name
+--v2.3 added new table name
 --v2.4 fixed column names with space 
 --v2.4 added XML to SQL Server 
 --v2.5 added where condition parameter to select a specific rows
