@@ -17,7 +17,10 @@
 --v2.5 added where condition parameter to select a specific rows
 --v2.5 adding patches for big tables with xml
 --v2.5 adding feature to exclude columns from the insert statement (dump table)
---v3.1 fixing columns selection
+--v3.1 fixed columns selection
+--v3.2 fixed null datetime columns
+--     fixed float print
+--     fixed decimal missing
 
 use [AdventureWorks2017]
 GO
@@ -70,8 +73,8 @@ declare
 @count_columns int,
 @loop int,
 @vcol varchar(50),
-@datatype varchar(50),
-@values_datatype varchar(100),
+@datatype varchar(150),
+@values_datatype varchar(300),
 @V$declare varchar(max),
 @V$select varchar(max),
 @V$variables varchar(max),
@@ -287,7 +290,7 @@ end
 close @tab
 deallocate @tab
 
-declare @insert_syntax table (column_name varchar(300), v_column_name varchar(300), data_type varchar(300), inserted_data_type varchar(1000))
+declare @insert_syntax table (column_name varchar(300), v_column_name varchar(1000), data_type varchar(1000), inserted_data_type varchar(2000))
 if @header = 1
 begin
 	set @v$column_desc = substring(@v$column_desc , 1, len(@v$column_desc)-1)
@@ -325,6 +328,7 @@ begin
 				when data_type = 'ntext'			then '[nvarchar](8000)'
 				when data_type = 'bit'				then '['+data_type+']'
 				when data_type = 'numeric'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
+				when data_type = 'decimal'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
 				when data_type = 'money'			then '['+data_type+']' 
 				when data_type = 'smallmoney'		then '['+data_type+']'
 				when data_type = 'uniqueidentifier' then '['+data_type+']'
@@ -349,15 +353,17 @@ begin
 				when data_type = 'ntext'			then '+isnull(''N''+'+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
 				when data_type = 'bit'				then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'numeric'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
+				when data_type = 'decimal'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'money'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'smallmoney'		then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'uniqueidentifier'	then '+isnull('+''''''''''+'+cast(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+' as varchar(50))+'+''''''''',''NULL'')+'+''
-				when data_type = 'float'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
+				when data_type = 'float'			then '+isnull(convert(varchar(50), cast(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+' as decimal(18,0)), 2),''NULL'')'
 				when data_type = 'int'				then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'bigint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'smallint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'tinyint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
-				when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
+--				when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
+				when data_type = 'datetime'			then '''case when ''+'+''''+''''+''''+''''+'+convert(varchar(50),isnull(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',''''),121)+'+''''+''''+''''+''''+ ' + '' = ''''1900-01-01 00:00:00.000'''' then NULL else ''+ '+''''+''''+''''+''''+'+convert(varchar(50),isnull(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',''''),121)+'+''''+''''+''''+''''+'+'' end'''
 				when data_type = 'datetime2'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				when data_type = 'date'				then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				when data_type = 'smalldate'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
@@ -383,6 +389,7 @@ begin
 				when data_type = 'ntext'			then '[nvarchar](8000)'
 				when data_type = 'bit'				then '['+data_type+']'
 				when data_type = 'numeric'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
+				when data_type = 'decimal'			then '['+data_type+']'+'('+cast(NUMERIC_PRECISION as varchar(50))+','+cast(NUMERIC_SCALE as varchar(50))+')'
 				when data_type = 'money'			then '['+data_type+']' 
 				when data_type = 'smallmoney'		then '['+data_type+']'
 				when data_type = 'uniqueidentifier' then '['+data_type+']'
@@ -405,20 +412,24 @@ begin
 				when data_type = 'ntext'			then '+isnull('+''''''''''+'+@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+'+'''''''',''NULL'')+'+''
 				when data_type = 'bit'				then '+isnull(convert(varchar(50), case @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+' when 1 then ''true'' else ''false'' end, 2),''NULL'')'
 				when data_type = 'numeric'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
+				when data_type = 'decimal'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'money'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'smallmoney'		then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'uniqueidentifier'	then '+isnull('+''''''''''+'+cast(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+' as varchar(50))+'+''''''''',''NULL'')+'+''
-				when data_type = 'float'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
+				when data_type = 'float'			then '+isnull(convert(varchar(50), cast(@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+' as decimal(18,0)), 2),''NULL'')'
 				when data_type = 'int'				then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'bigint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'smallint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'tinyint'			then '+isnull(convert(varchar(50), @'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+', 2),''NULL'')'
 				when data_type = 'datetime'			then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
+--				when data_type = 'datetime'			then 'case when +'+''''+''''+''''+''''+'+convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121)+'+''''+''''+''''+''''+ '= ''1900-01-01 00:00:00'' then NULL else '+''''+''''+''''+''''+'+convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121)+'+''''+''''+''''+''''+' end'
 				when data_type = 'datetime2'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				when data_type = 'date'				then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				when data_type = 'smalldate'		then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				when data_type = 'smalldatetime'	then ''''+''''+''''+''''+'+isnull(convert(varchar(50),@'+lower(case when charindex(' ',column_name) > 0 then replace(column_name,' ','') else column_name end)+',121),''NULL'')+'+''''+''''+''''+''''
 				end DATA_TYPE
+--					+ 'case when '+''''+convert(varchar(50),isnull(@backup_time,''),121)+'''' + ' = ''1900-01-01 00:00:00.000'' then NULL else '+ ''''+convert(varchar(50),isnull(@backup_time,''),121)+''''+' end'+','+ +isnull(''''+replace(@template_id,'''','''''')+'''',NULL)++');'
+
 		from INFORMATION_SCHEMA.columns c
 		where object_id('['+c.TABLE_SCHEMA+'].['+TABLE_NAME+']') = @object_id
 		and column_name in (select column_name from @columns_table)
