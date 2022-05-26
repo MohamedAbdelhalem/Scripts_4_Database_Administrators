@@ -1,0 +1,9 @@
+NB: LATCH_EX on ACCESS_METHODS_DATASET_PARENT is not about IO at all. It is strictly related to parallelism, 
+as is the latch the parallel scans 'child' threads must acquire on the parent thread to allocate the scan range for that child. 
+Contention on it indicates the parallelism is inefficient (is doing more 'homework' than actual useful work). 
+
+Partitioning would exacerbate this symptom, specially unaligned partitioning (as parent/child datasets are set per partition). 
+
+Bad cardinality estimates (outdated stats?) may also be to blame, conducting to parallelism when not necessary. 
+On and all my advice is the same: identify the actual problem query(s).
+
