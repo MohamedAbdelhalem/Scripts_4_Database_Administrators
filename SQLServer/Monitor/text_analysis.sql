@@ -29,6 +29,7 @@ substring(index_name, 1, charindex(' ',index_name)-1) index_name
 from (
 select syntax, command,
 case when command = 'Alter Table' then case 
+when syntax like '% alter column %' then 'Alter Column'
 when syntax like '% add %' then 'Add Column'
 when syntax like '% drop %' then 'Drop Column'
 end end sub_command,
