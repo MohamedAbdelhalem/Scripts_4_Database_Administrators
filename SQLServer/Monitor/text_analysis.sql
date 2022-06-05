@@ -14,12 +14,14 @@ case
 when substring(table_name, 1, charindex(' ',table_name)-1) like '%(%' then substring(table_name, 1, charindex('(',table_name)-1)
 else substring(table_name, 1, charindex(' ',table_name)-1) end
 table_name, 
+case when fn_name != 'not a compute column' then 
 case 
 when substring(fn_name, 1, charindex(' ',fn_name)-1) like '%(%' then substring(fn_name, 1, charindex('(',fn_name)-1)
 else substring(fn_name, 1, charindex(' ',fn_name)-1) end
+else fn_name end
 fn_name, 
 case command 
-when 'Alter Table' then substring(column_name, 1, charindex(' ',column_name)-1) 
+when 'Alter Table' then substring(column_name, 1, charindex(' ',column_name)-1)
 when 'Create Index' then substring(replace(replace(column_name,' ASC',''),' DESC',''), 1, charindex(')',replace(replace(column_name,' ASC',''),' DESC',''))-1) 
 end
 column_name, 
@@ -38,9 +40,10 @@ when command = 'Create Index' then substring(syntax, charindex(' on ',syntax)+4,
 when command = 'Drop Index' then substring(syntax, charindex(' on ',syntax)+4, len(syntax)) 
 end table_name,
 case 
-when command = 'Alter Table' then substring(syntax, charindex(' as ',syntax)+4, len(syntax)) 
+when command = 'Alter Table' then case when charindex(' as ', syntax) > 0 then substring(syntax, charindex(' as ',syntax)+4, len(syntax)) else 'not a compute column' end 
 end fn_name,
 case 
+when command = 'Alter Table' then substring(syntax, charindex(' alter column ',syntax)+14, len(syntax)) 
 when command = 'Alter Table' then substring(syntax, charindex(' add ',syntax)+5, len(syntax)) 
 when command = 'Alter Table' then substring(syntax, charindex(' drop ',syntax)+5, len(syntax)) 
 when command = 'create index' then substring(syntax, charindex('(',syntax)+1, len(syntax)) 
@@ -62,4 +65,3 @@ from (select @sql_text [value])a_
 
 return 
 end
-
