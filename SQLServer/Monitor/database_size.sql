@@ -1,11 +1,11 @@
 Exec [master].[dbo].[database_size]
-@databases		= '*',
+@databases	= '*',
 @with_system	= 0,
 @threshold_pct	= 85,
-@volumes		= '*',
+@volumes	= '*',
 @where_size_gt  = 0,
-@datafile		= 'data',
-@report			= 1
+@datafile	= '*',
+@report		= 1
 
 
 go
