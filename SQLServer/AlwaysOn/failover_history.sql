@@ -33,3 +33,6 @@ where procee not in ('Logon','Backup')
 --and log_text != 'Unable to access availability database ''RetinaDatabase'' because the database replica is not in the PRIMARY or SECONDARY role. Connections to an availability database is permitted only when the database replica is in the PRIMARY or SECONDARY role. Try the operation again later.'
 --and log_text != 'Error: 983, Severity: 14, State: 1.'
 and log_text like '%RetinaDatabase%'
+
+
+
