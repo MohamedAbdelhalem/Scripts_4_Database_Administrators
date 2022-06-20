@@ -1,31 +1,31 @@
 USE [master]
 GO
 
-CREATE FUNCTION [dbo].[Separator]
-(@str NVARCHAR(MAX),@sepr NVARCHAR(5))
-RETURNS @table TABLE (ID INT IDENTITY(1,1), [Value] NVARCHAR(150))
-AS
-BEGIN
-DECLARE 
-@word   NVARCHAR(150), 
-@len    INT, 
-@s_ind  INT, 
-@f_ind  INT
---
-SET @len  = LEN(@str)
-SET @f_ind = 1
+CREATE Function [dbo].[Separator]
+(@str nvarchar(max), @sepr nvarchar(5))
+returns @table table (id int identity(1,1), [value] nvarchar(550))
+as
+begin
+declare 
+@word   nvarchar(550), 
+@len    int, 
+@s_ind  int, 
+@f_ind  int
 
-WHILE @f_ind > 0
-BEGIN
-SET @f_ind = CASE WHEN CHARINDEX(@sepr,@str)-1 < 0 THEN 0 ELSE CHARINDEX(@sepr,@str)-1 END
-SET @s_ind = CHARINDEX(@sepr,@str)+1
-SET @len   = LEN(@str)
-SET @word  = CASE WHEN SUBSTRING(@str , 1, @f_ind) = '' THEN @str ELSE SUBSTRING(@str , 1, @f_ind) END
-SET @str   = SUBSTRING(@str , @s_ind,@len )
+set @len  = LEN(@str)
+set @f_ind = 1
 
-INSERT INTO @table 
-SELECT @word
-END
+while @f_ind > 0
+begin
+set @f_ind = case when charindex(@sepr,@str)-1 < 0 then 0 else charindex(@sepr,@str) end
+set @s_ind = charindex(@sepr,@str) + len(@sepr)
+set @len   = len(@str)
+set @word  = case when substring(@str , 1, @f_ind) = '' then @str else substring(@str , 1, @f_ind) end
+set @str   = substring(@str , @s_ind,@len )
 
-RETURN
-END
+insert into @table 
+select @word
+end
+
+return
+end
