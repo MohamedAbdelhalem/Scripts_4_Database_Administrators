@@ -119,7 +119,7 @@ end
 else
 begin
 insert into @columns_table 
-select ltrim(rtrim(value)) from dbo.Separator(@columns,',') 
+select ltrim(rtrim(value)) from master.dbo.Separator(@columns,',') 
 end
 
 if @migrated_to = 'MS SQL Server' and @object_id is not null
