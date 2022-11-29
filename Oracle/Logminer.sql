@@ -29,6 +29,8 @@ WBMTHD    YES
 
 SQL> alter system switch logfile;
 
+SQL> select MEMBER from v$logfile where is_recovery_dest_file = 'YES';
+
 SQL> begin
     	dbms_logmnr.end_logmnr();
     	dbms_logmnr.add_logfile ('+FRA/WBMTHD/ONLINELOG/group_2.358.995885487');
