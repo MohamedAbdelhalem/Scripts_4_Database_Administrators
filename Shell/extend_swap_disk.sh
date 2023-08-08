@@ -1,4 +1,4 @@
-echo "Please give us the below info to add the new disk to extend swap size"
+echo "Please give us the below info to add the new disk to extend the swap size."
 echo -n "disk (sdb): "
 read -r disk
 
