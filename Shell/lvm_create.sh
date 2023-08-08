@@ -1,3 +1,15 @@
+echo "Please give us the below info to create the new LVM"
+echo -n "disk (sdb): "
+read -r disk
+echo -n "volume group (vg_data): "
+read -r vg
+echo -n "partition no (1): "
+read -r part_no
+echo -n "LVM (lv_data01): "
+read -r lv
+echo -n "mount point (/u01 or /data): "
+read -r mount_point
+
 disk=$1
 part_no=$2
 vg=$3
