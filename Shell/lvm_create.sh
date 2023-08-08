@@ -10,11 +10,25 @@ read -r lv
 echo -n "mount point (/u01 or /data): "
 read -r mount_point
 
-disk=$1
-part_no=$2
-vg=$3
-lv=$4
-mount_point=$5
+isempty=0
+if [[ -z "$disk" ]]; then
+   isempty=$((isempty+1))
+fi
+if [[ -z "$vg" ]]; then
+   isempty=$((isempty+1))
+fi
+if [[ -z "$part_no" ]]; then
+   part_no_empty=1
+fi
+if [[ -z "$lv" ]]; then
+   lv_empty=1
+fi
+if [[ -z "$mount_point" ]]; then
+   mount_point_empty=1
+fi
+echo "Please fill all required parameters"
+
+if [[ $isempty -eq 0 ]]; then
 (
 echo o # Create a new empty DOS partition table
 echo n # Add a new partition
@@ -36,3 +50,4 @@ mkfs.ext4 /dev/$vg/$lv
 mkdir -p $mount_point
 mount /dev/$vg/$lv $mount_point
 echo /dev/$vg/$lv  $mount_point ext4 defaults 0 0 >> /etc/fstab
+fi
