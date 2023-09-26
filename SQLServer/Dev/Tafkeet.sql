@@ -1,12 +1,4 @@
-USE [dbRecovery]
-GO
-/****** Object:  UserDefinedFunction [dbo].[Tafkeet]    Script Date: 11/9/2021 2:28:05 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER FUNCTION [dbo].[Tafkeet](@Number int, @currency varchar(5))
+Create Function [dbo].[Tafkeet](@Number int, @currency varchar(5))
 returns nvarchar(250)
 as
 Begin
@@ -20,8 +12,54 @@ set @loop = 0
 set @len = len(@number)
 set @result = ''
 
+CREATE TABLE #Arb_numbers(id int, number int, trans nvarchar(100), cat varchar(50))
+CREATE TABLE #currency(id int, currency_short_arabic varchar(100), currency_long_arabic nvarchar(100))
+
+insert into #currency values
+(1,'EGP',N'جنية مصري'),
+(2,'SAR',N'ريال سعودي'),
+(3,'USD',N'دولار أمريكي'),
+	
+insert into #Arb_numbers values 
+(1, 0, N'صفر', '0'),
+(2, 1, N'واحد', '0'),
+(3, 1, N'أحد', '2'),
+(4, 2, N'أثنان', '0'),
+(5, 2, N'أثنا', '6'),
+(6, 3, N'ثلاثة', '0'),
+(7, 4, N'أربعة', '0'),
+(8, 5, N'خمسة', '0'),
+(9, 6, N'ستة', '0'),
+(10, 7, N'سبعة', '0'),
+(11, 8, N'ثمانية', '0'),
+(12, 9, N'تسعة', '0'),
+(13, 10, N'عشرة', '0'),
+(14, 10, N'عشر', '+'),
+(15, 20, N'عشرون', '0'),
+(16, 30, N'ثلاثون', '0'),
+(17, 40, N'اربعون', '0'),
+(18, 50, N'خمسون', '0'),
+(19, 60, N'ستون', '0'),
+(20, 70, N'سبعون', '0'),
+(21, 80, N'ثمانون', '0'),
+(22, 90, N'تسعون', '0'),
+(23, 100, N'مائة', '0'),
+(24, 200, N'مئتان', '0'),
+(25, 300, N'ثلاثمائة', '0'),
+(26, 400, N'أربعمائة', '0'),
+(27, 500, N'خمسمائة', '0'),
+(28, 600, N'ستمائة', '0'),
+(29, 700, N'سبعمائة', '0'),
+(30, 800, N'ثمانمائة', '0'),
+(31, 900, N'تسعمائة', '0'),
+(32, 1000, N'ألف', '0'),
+(33, 2000, N'ألفان', '0'),
+(34, 1000, N'الأف', '+'),
+(35, 1000000, N'مليون', '0'),
+(36, 1000000, N'ملاين', '+')
+
 select @currency_char = currency_long_arabic
-from currency
+from #currency
 where currency_short_arabic = @currency
 
 if @len = 1 begin
