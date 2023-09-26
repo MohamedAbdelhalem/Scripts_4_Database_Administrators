@@ -64,7 +64,7 @@ where currency_short_arabic = @currency
 
 if @len = 1 begin
   select @result = trans
-    from Arb_numbers
+    from #Arb_numbers
    where number = @number
      and cat = '0'
 end
@@ -75,7 +75,7 @@ begin
       set @loop = @loop +1
 	  if @loop = 1 begin
 	    select @trans = trans
-          from Arb_numbers
+          from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)),2,1) as int)
            and cat = case cast(substring(cast(@number as varchar(100)),1,1) as int) when 1 then
 		  case cast(substring(cast(@number as varchar(100)),2,1) as int) 
@@ -83,7 +83,7 @@ begin
       end
       if @loop = 2 begin
 	    select @trans = trans
-          from Arb_numbers
+          from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)), 1, 1) as int) * 10
            and cat = case cast(substring(cast(@number as varchar(100)), 1, 1) as int) when 1 then 
 		   case cast(substring(cast(@number as varchar(100)),2,1) as int)  
@@ -111,13 +111,13 @@ if @len = 3 begin
     set @loop = @loop +1
 	if @loop = 1 begin
 	  select @trans = trans
-        from Arb_numbers
+        from #Arb_numbers
        where number = cast(substring(cast(@number as varchar(100)), 1, 1) as int) * 100
          and cat = 0
 	end
 	if @loop = 2 begin
 	  select @trans = trans
-        from Arb_numbers
+        from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)),3,1) as int)
            and cat = case cast(substring(cast(@number as varchar(100)),2,1) as int) when 1 then
 		  case cast(substring(cast(@number as varchar(100)),3,1) as int) 
@@ -125,7 +125,7 @@ if @len = 3 begin
     end
     if @loop = 3 begin
 	  select @trans = trans
-       from Arb_numbers
+       from #Arb_numbers
        where number = cast(substring(cast(@number as varchar(100)), 2, 1) as int) * 10
          and cat = case cast(substring(cast(@number as varchar(100)), 2, 1) as int) when 1 then
 		 case 
@@ -159,23 +159,23 @@ if @len = 4 begin
       if @loop = 1 begin
         select @trans = trans + case when cast(substring(cast(@number as varchar(100)), 1, 1) as int) in (1,2) then N'' else (
 	       select N' '+trans 
-             from Arb_numbers 
+             from #Arb_numbers 
             where number = 1000
               and cat = '+') end
-          from Arb_numbers
+          from #Arb_numbers
          where number = case when cast(substring(cast(@number as varchar(100)), 1, 1) as int) in (1,2) then cast(substring(cast(@number as varchar(100)), 1, 1) as int) * 1000 
 						else cast(substring(cast(@number as varchar(100)), 1, 1) as int) end
            and cat = '0'
       end
       if @loop = 2 begin
         select @trans = trans
-          from Arb_numbers
+          from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)), 2, 1) as int) * 100
            and cat = 0
       end
       if @loop = 3 begin
         select @trans = trans
-          from Arb_numbers
+          from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)), 4, 1) as int)
            and cat = case when cast(substring(cast(@number as varchar(100)), 3, 1) as int) = 1 then 
                      case cast(substring(cast(@number as varchar(100)), 4, 1) as int) 
@@ -183,7 +183,7 @@ if @len = 4 begin
       end
       if @loop = 4 begin
         select @trans = trans
-          from Arb_numbers
+          from #Arb_numbers
          where number = cast(substring(cast(@number as varchar(100)), 3, 1) as int) * 10
          and cat = case cast(substring(cast(@number as varchar(100)), 3, 1) as int) when 1 then
 		 case 
@@ -217,7 +217,7 @@ if @len = 5 begin
     set @loop = @loop +1
       if @loop = 1 begin
 	    select @trans = trans 
-	      from Arb_numbers
+	      from #Arb_numbers
 	     where number = cast(substring(cast(@number as varchar(100)),2,1) as int) 
 		   and cat = case when cast(substring(cast(@number as varchar(100)),1,1) as int) = 1 then 
                      case cast(substring(cast(@number as varchar(100)),2,1) as int) 
@@ -226,24 +226,24 @@ if @len = 5 begin
       if @loop = 2 begin
 	    select @trans = trans +N' '+ (
 	      select trans 
-	        from Arb_numbers 
+	        from #Arb_numbers 
 	       where number = 1000 
 	         and cat = case when substring(cast(@number as varchar(100)),1,1) = 1 then 
 	                   case when substring(cast(@number as varchar(100)),2,1) = 0 then '+' else '0' end else '0' end)
-	      from Arb_numbers
+	      from #Arb_numbers
 	     where number = substring(cast(@number as varchar(100)),1,1) * 10
 	       and cat = case when substring(cast(@number as varchar(100)),1,1) = 1 then 
 	                 case when substring(cast(@number as varchar(100)),2,1) = 0 then '0' else '+' end else '0' end
 	  end
 	  if @loop = 3 begin
 	    select @trans = trans
-	      from Arb_numbers
+	      from #Arb_numbers
 	      where number = cast(substring(cast(@number as varchar), 3, 1) as int)* 100
 	        and cat = '0'
 	  end
       if @loop = 4 begin
 	    select @trans = trans
-	      from Arb_numbers
+	      from #Arb_numbers
 	     where number = cast(substring(cast(@number as varchar), 5,1) as int)
 		   and cat = case when cast(substring(cast(@number as varchar), 4,1) as int) = 1 then 
                      case cast(substring(cast(@number as varchar), 5,1) as int) 
@@ -251,7 +251,7 @@ if @len = 5 begin
 	  end
       if @loop = 5 begin
 	    select @trans = trans
-	      from Arb_numbers
+	      from #Arb_numbers
 	     where number = cast(substring(cast(@number as varchar), 4,1) as int) * 10
 	       and cat = case when cast(substring(cast(@number as varchar), 4,1) as int) = 1 then 
 	                 case when cast(substring(cast(@number as varchar), 5,1) as int) = 0 then '0' else '+' end else '0' end
@@ -302,13 +302,13 @@ if @len = 6 begin
     set @loop = @loop +1
     if @loop = 1 begin
      select @trans = trans 
-	   from Arb_numbers
+	   from #Arb_numbers
 	  where number = cast(substring(cast(@number as varchar(100)),1,1) as int) * 100 
 	    and cat = '0'
 	end
     if @loop = 2 begin
 	  select @trans = trans 
-	    from Arb_numbers 
+	    from #Arb_numbers 
 	   where number = cast(substring(cast(@number as varchar(100)),3,1) as int) *1
 	     and cat = case cast(substring(cast(@number as varchar(100)),2,1) as int) when 1 then
 	               case cast(substring(cast(@number as varchar(100)),3,1) as int) 
@@ -316,20 +316,20 @@ if @len = 6 begin
 	end
     if @loop = 3 begin 
 	  select @trans=trans
-	    from Arb_numbers
+	    from #Arb_numbers
 	   where number = cast(substring(cast(@number as varchar(100)),2,1) as int) *10
 	     and cat = case when cast(substring(cast(@number as varchar(100)),3,1) as int) = 1 then 
 	               case when cast(substring(cast(@number as varchar(100)),2,1) as int) = 0 then '0' else '+' end else '0' end
 	end
     if @loop = 4 begin
 	  select @trans = trans 
-	    from Arb_numbers
+	    from #Arb_numbers
 	   where number = cast(substring(cast(@number as varchar(100)),4,1) as int) * 100 
 	     and cat = '0'
 	end
     if @loop = 5 begin 
 	  select @trans = trans 
-	    from Arb_numbers 
+	    from #Arb_numbers 
 	   where number = cast(substring(cast(@number as varchar(100)),6,1) as int) *1
 	     and cat = case cast(substring(cast(@number as varchar(100)),5,1) as int) when 1 then
 	               case cast(substring(cast(@number as varchar(100)),6,1) as int) 
@@ -337,7 +337,7 @@ if @len = 6 begin
 	end
 	if @loop = 6 begin 
 	  select @trans=trans
-	    from Arb_numbers
+	    from #Arb_numbers
 	   where number = cast(substring(cast(@number as varchar(100)),5,1) as int) *10
 	     and cat = case when cast(substring(cast(@number as varchar(100)),5,1) as int) = 1 then 
 	               case when cast(substring(cast(@number as varchar(100)),6,1) as int) = 0 then '0' else '+' end else '0' end
